@@ -214,9 +214,9 @@ class FavoritesScreen extends StatelessWidget {
           color: Colors.red,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Column(
+        child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.delete, color: Colors.white, size: 32),
             SizedBox(height: 4),
             Text(

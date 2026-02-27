@@ -15,10 +15,17 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
     on<SearchRecipes>(_onSearchRecipes);
     on<FilterByCategory>(_onFilterByCategory);
     on<FilterByRegion>(_onFilterByRegion);
+    on<FilterByDifficulty>(_onFilterByDifficulty);
+    on<ToggleVegetarian>(_onToggleVegetarian);
     on<ToggleFavorite>(_onToggleFavorite);
     on<LoadFavorites>(_onLoadFavorites);
+    on<ToggleFavoritesView>(_onToggleFavoritesView);
+    on<SortRecipes>(_onSortRecipes);
+    on<FilterByMaxTime>(_onFilterByMaxTime);
     on<ClearFilters>(_onClearFilters);
   }
+
+  // ── Load ───────────────────────────────────────────────────────────────────
 
   Future<void> _onLoadRecipes(
     LoadRecipes event,
@@ -26,7 +33,7 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
   ) async {
     emit(const RecipeLoading());
     try {
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 600));
       emit(RecipeLoaded(
         recipes: _allRecipes,
         allRecipes: _allRecipes,
@@ -36,153 +43,245 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
     }
   }
 
+  // ── Core Filter Engine ────────────────────────────────────────────────────
+  // Single source of truth for all filtering + sorting logic.
+
   List<Recipe> _applyFilters({
     required List<Recipe> source,
+    required String query,
+    required String category,
+    required String region,
+    required String difficulty,
+    required bool vegetarianOnly,
+    required bool favoritesOnly,
+    required Set<String> favoriteIds,
+    required int? maxCookTime,
+    required RecipeSortOrder sortOrder,
+  }) {
+    // 1. Start with source
+    List<Recipe> result = source;
+
+    // 2. Favorites-only view
+    if (favoritesOnly) {
+      result = result.where((r) => favoriteIds.contains(r.id)).toList();
+    }
+
+    // 3. Search — uses the extension from recipe_model.dart (Telugu + English)
+    if (query.trim().isNotEmpty) {
+      result = result.search(query);
+    }
+
+    // 4. Category filter
+    if (category != 'All') {
+      result = result.byCategory(category);
+    }
+
+    // 5. Region filter
+    if (region != 'All') {
+      result = result.byRegion(region);
+    }
+
+    // 6. Difficulty filter
+    if (difficulty != 'All') {
+      result = result.byDifficulty(difficulty);
+    }
+
+    // 7. Vegetarian toggle
+    if (vegetarianOnly) {
+      result = result.vegetarianOnly;
+    }
+
+    // 8. Max cook time
+    if (maxCookTime != null) {
+      result = result.maxCookTime(maxCookTime);
+    }
+
+    // 9. Sort
+    switch (sortOrder) {
+      case RecipeSortOrder.topRated:
+        result = result.topRated;
+        break;
+      case RecipeSortOrder.quickestFirst:
+        result = result.quickestFirst;
+        break;
+      case RecipeSortOrder.alphabetical:
+        result = [...result]..sort((a, b) => a.title.compareTo(b.title));
+        break;
+      case RecipeSortOrder.defaultOrder:
+        break; // Keep original order
+    }
+
+    return result;
+  }
+
+  // ── Helper: rebuild filtered list from current state ──────────────────────
+
+  List<Recipe> _rebuildFromState(
+    RecipeLoaded state, {
     String? query,
     String? category,
     String? region,
-    Set<String>? favorites,
-    bool favoritesOnly = false,
+    String? difficulty,
+    bool? vegetarianOnly,
+    bool? favoritesOnly,
+    Set<String>? favoriteIds,
+    int? maxCookTime,
+    bool clearMaxTime = false,
+    RecipeSortOrder? sortOrder,
   }) {
-    return source.where((recipe) {
-      if (favoritesOnly && !(favorites?.contains(recipe.id) ?? false)) {
-        return false;
-      }
-
-      if (query != null && query.isNotEmpty) {
-        final searchLower = query.toLowerCase();
-        final matches = recipe.title.toLowerCase().contains(searchLower) ||
-            recipe.titleTe.toLowerCase().contains(searchLower) ||
-            recipe.tags.any((tag) => tag.toLowerCase().contains(searchLower));
-        if (!matches) return false;
-      }
-
-      if (category != null && category != 'All') {
-        if (recipe.category != category) return false;
-      }
-
-      if (region != null && region != 'All') {
-        if (recipe.region != region) return false;
-      }
-
-      return true;
-    }).toList();
+    return _applyFilters(
+      source: state.allRecipes,
+      query: query ?? state.searchQuery,
+      category: category ?? state.selectedCategory,
+      region: region ?? state.selectedRegion,
+      difficulty: difficulty ?? state.selectedDifficulty,
+      vegetarianOnly: vegetarianOnly ?? state.vegetarianOnly,
+      favoritesOnly: favoritesOnly ?? state.showFavoritesOnly,
+      favoriteIds: favoriteIds ?? state.favoriteIds,
+      maxCookTime:
+          clearMaxTime ? null : (maxCookTime ?? state.maxCookTimeMinutes),
+      sortOrder: sortOrder ?? state.sortOrder,
+    );
   }
+
+  // ── Event Handlers ─────────────────────────────────────────────────────────
 
   Future<void> _onSearchRecipes(
     SearchRecipes event,
     Emitter<RecipeState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is RecipeLoaded) {
-      final filtered = _applyFilters(
-        source: currentState.allRecipes,
-        query: event.query,
-        category: currentState.selectedCategory,
-        region: currentState.selectedRegion,
-        favorites: currentState.favoriteIds,
-      );
+    final s = state;
+    if (s is! RecipeLoaded) return;
 
-      emit(currentState.copyWith(
-        recipes: filtered,
-        searchQuery: event.query,
-      ));
-    }
+    final filtered = _rebuildFromState(s, query: event.query);
+    emit(s.copyWith(recipes: filtered, searchQuery: event.query));
   }
 
   Future<void> _onFilterByCategory(
     FilterByCategory event,
     Emitter<RecipeState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is RecipeLoaded) {
-      final filtered = _applyFilters(
-        source: currentState.allRecipes,
-        query: currentState.searchQuery,
-        category: event.category,
-        region: currentState.selectedRegion,
-        favorites: currentState.favoriteIds,
-      );
+    final s = state;
+    if (s is! RecipeLoaded) return;
 
-      emit(currentState.copyWith(
-        recipes: filtered,
-        selectedCategory: event.category,
-      ));
-    }
+    final filtered = _rebuildFromState(s, category: event.category);
+    emit(s.copyWith(recipes: filtered, selectedCategory: event.category));
   }
 
   Future<void> _onFilterByRegion(
     FilterByRegion event,
     Emitter<RecipeState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is RecipeLoaded) {
-      final filtered = _applyFilters(
-        source: currentState.allRecipes,
-        query: currentState.searchQuery,
-        category: currentState.selectedCategory,
-        region: event.region,
-        favorites: currentState.favoriteIds,
-      );
+    final s = state;
+    if (s is! RecipeLoaded) return;
 
-      emit(currentState.copyWith(
-        recipes: filtered,
-        selectedRegion: event.region,
-      ));
-    }
+    final filtered = _rebuildFromState(s, region: event.region);
+    emit(s.copyWith(recipes: filtered, selectedRegion: event.region));
+  }
+
+  Future<void> _onFilterByDifficulty(
+    FilterByDifficulty event,
+    Emitter<RecipeState> emit,
+  ) async {
+    final s = state;
+    if (s is! RecipeLoaded) return;
+
+    final filtered = _rebuildFromState(s, difficulty: event.difficulty);
+    emit(s.copyWith(recipes: filtered, selectedDifficulty: event.difficulty));
+  }
+
+  Future<void> _onToggleVegetarian(
+    ToggleVegetarian event,
+    Emitter<RecipeState> emit,
+  ) async {
+    final s = state;
+    if (s is! RecipeLoaded) return;
+
+    final newVeg = !s.vegetarianOnly;
+    final filtered = _rebuildFromState(s, vegetarianOnly: newVeg);
+    emit(s.copyWith(recipes: filtered, vegetarianOnly: newVeg));
   }
 
   Future<void> _onToggleFavorite(
     ToggleFavorite event,
     Emitter<RecipeState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is RecipeLoaded) {
-      final updatedFavorites = Set<String>.from(currentState.favoriteIds);
+    final s = state;
+    if (s is! RecipeLoaded) return;
 
-      if (updatedFavorites.contains(event.recipeId)) {
-        updatedFavorites.remove(event.recipeId);
-      } else {
-        updatedFavorites.add(event.recipeId);
-      }
-
-      emit(currentState.copyWith(favoriteIds: updatedFavorites));
+    final updatedFavorites = Set<String>.from(s.favoriteIds);
+    if (updatedFavorites.contains(event.recipeId)) {
+      updatedFavorites.remove(event.recipeId);
+    } else {
+      updatedFavorites.add(event.recipeId);
     }
+
+    // If in favorites-only view, rebuild so removed item disappears
+    final filtered = _rebuildFromState(s, favoriteIds: updatedFavorites);
+    emit(s.copyWith(recipes: filtered, favoriteIds: updatedFavorites));
   }
 
   Future<void> _onLoadFavorites(
     LoadFavorites event,
     Emitter<RecipeState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is RecipeLoaded) {
-      final filtered = _applyFilters(
-        source: currentState.allRecipes,
-        query: currentState.searchQuery,
-        category: currentState.selectedCategory,
-        region: currentState.selectedRegion,
-        favorites: currentState.favoriteIds,
-        favoritesOnly: true,
-      );
+    // No-op on initial load — favorites start empty (add persistence later)
+  }
 
-      emit(currentState.copyWith(
-        recipes: filtered,
-        showFavoritesOnly: true,
-      ));
-    }
+  Future<void> _onToggleFavoritesView(
+    ToggleFavoritesView event,
+    Emitter<RecipeState> emit,
+  ) async {
+    final s = state;
+    if (s is! RecipeLoaded) return;
+
+    final newFavOnly = !s.showFavoritesOnly;
+    final filtered = _rebuildFromState(s, favoritesOnly: newFavOnly);
+    emit(s.copyWith(recipes: filtered, showFavoritesOnly: newFavOnly));
+  }
+
+  Future<void> _onSortRecipes(
+    SortRecipes event,
+    Emitter<RecipeState> emit,
+  ) async {
+    final s = state;
+    if (s is! RecipeLoaded) return;
+
+    final filtered = _rebuildFromState(s, sortOrder: event.sortOrder);
+    emit(s.copyWith(recipes: filtered, sortOrder: event.sortOrder));
+  }
+
+  Future<void> _onFilterByMaxTime(
+    FilterByMaxTime event,
+    Emitter<RecipeState> emit,
+  ) async {
+    final s = state;
+    if (s is! RecipeLoaded) return;
+
+    final filtered = _rebuildFromState(
+      s,
+      maxCookTime: event.maxMinutes,
+      clearMaxTime: event.maxMinutes == null,
+    );
+    emit(s.copyWith(
+      recipes: filtered,
+      maxCookTimeMinutes: event.maxMinutes,
+      clearMaxTime: event.maxMinutes == null,
+    ));
   }
 
   Future<void> _onClearFilters(
     ClearFilters event,
     Emitter<RecipeState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is RecipeLoaded) {
-      emit(RecipeLoaded(
-        recipes: currentState.allRecipes,
-        allRecipes: currentState.allRecipes,
-        favoriteIds: currentState.favoriteIds,
-      ));
-    }
+    final s = state;
+    if (s is! RecipeLoaded) return;
+
+    // Reset all filters but keep favorites
+    emit(RecipeLoaded(
+      recipes: _allRecipes,
+      allRecipes: _allRecipes,
+      favoriteIds: s.favoriteIds,
+    ));
   }
 }

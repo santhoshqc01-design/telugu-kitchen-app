@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
+// ─── Recipe Model ─────────────────────────────────────────────────────────────
+
 class Recipe extends Equatable {
   final String id;
   final String title;
@@ -49,6 +51,116 @@ class Recipe extends Equatable {
     required this.difficulty,
     required this.tags,
   });
+
+  // ── Computed Properties ────────────────────────────────────────────────────
+
+  /// Display-ready cook time e.g. "45 min" or "1 hr 30 min"
+  String get cookTimeDisplay {
+    if (cookTimeMinutes < 60) return '$cookTimeMinutes min';
+    final hours = cookTimeMinutes ~/ 60;
+    final mins = cookTimeMinutes % 60;
+    return mins == 0 ? '$hours hr' : '$hours hr $mins min';
+  }
+
+  /// Short cook time label for cards
+  String get cookTimeShort => '$cookTimeMinutes min';
+
+  /// Nutrition summary string
+  String get nutritionSummary =>
+      '${calories} cal · ${protein.toStringAsFixed(0)}g protein · '
+      '${carbs.toStringAsFixed(0)}g carbs · ${fat.toStringAsFixed(0)}g fat';
+
+  /// True if the recipe is quick (under 30 mins)
+  bool get isQuick => cookTimeMinutes <= 30;
+
+  /// Rating display string e.g. "4.8"
+  String get ratingDisplay => rating.toStringAsFixed(1);
+
+  /// Telugu/English bilingual title for display
+  String get bilingualTitle => '$title • $titleTe';
+
+  // ── Color Helpers ──────────────────────────────────────────────────────────
+
+  Color get regionColor {
+    switch (region) {
+      case 'Andhra':
+        return const Color(0xFFE65100); // Deep orange
+      case 'Telangana':
+        return const Color(0xFF6A1B9A); // Purple
+      case 'Rayalaseema':
+        return const Color(0xFF2E7D32); // Green
+      default:
+        return const Color(0xFF1565C0); // Blue
+    }
+  }
+
+  Color get difficultyColor {
+    switch (difficulty) {
+      case 'Easy':
+        return const Color(0xFF2E7D32); // Green
+      case 'Medium':
+        return const Color(0xFFE65100); // Orange
+      case 'Hard':
+        return const Color(0xFFB71C1C); // Red
+      default:
+        return const Color(0xFF757575); // Grey
+    }
+  }
+
+  Color get categoryColor {
+    switch (category) {
+      case 'Breakfast':
+        return const Color(0xFFF57F17);
+      case 'Lunch':
+        return const Color(0xFF1B5E20);
+      case 'Dinner':
+        return const Color(0xFF1A237E);
+      case 'Snacks':
+        return const Color(0xFF880E4F);
+      case 'Desserts':
+        return const Color(0xFF4A148C);
+      case 'Beverages':
+        return const Color(0xFF006064);
+      default:
+        return const Color(0xFF37474F);
+    }
+  }
+
+  // ── Icon Helpers ───────────────────────────────────────────────────────────
+
+  IconData get categoryIcon {
+    switch (category) {
+      case 'Breakfast':
+        return Icons.free_breakfast_rounded;
+      case 'Lunch':
+        return Icons.lunch_dining_rounded;
+      case 'Dinner':
+        return Icons.dinner_dining_rounded;
+      case 'Snacks':
+        return Icons.fastfood_rounded;
+      case 'Desserts':
+        return Icons.cake_rounded;
+      case 'Beverages':
+        return Icons.local_cafe_rounded;
+      default:
+        return Icons.restaurant_rounded;
+    }
+  }
+
+  IconData get difficultyIcon {
+    switch (difficulty) {
+      case 'Easy':
+        return Icons.sentiment_satisfied_rounded;
+      case 'Medium':
+        return Icons.sentiment_neutral_rounded;
+      case 'Hard':
+        return Icons.sentiment_very_dissatisfied_rounded;
+      default:
+        return Icons.help_outline_rounded;
+    }
+  }
+
+  // ── Serialization ──────────────────────────────────────────────────────────
 
   factory Recipe.fromJson(Map<String, dynamic> json) {
     return Recipe(
@@ -104,32 +216,57 @@ class Recipe extends Equatable {
     };
   }
 
-  // Add these inside Recipe class after the constructor
+  // ── CopyWith ───────────────────────────────────────────────────────────────
+  // Useful for updating a recipe (e.g. toggling favorite, updating rating)
 
-  Color get regionColor {
-    switch (region) {
-      case 'Andhra':
-        return Colors.orange;
-      case 'Telangana':
-        return Colors.pink;
-      case 'Rayalaseema':
-        return Colors.green;
-      default:
-        return Colors.blue;
-    }
-  }
-
-  Color get difficultyColor {
-    switch (difficulty) {
-      case 'Easy':
-        return Colors.green;
-      case 'Medium':
-        return Colors.orange;
-      case 'Hard':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
+  Recipe copyWith({
+    String? id,
+    String? title,
+    String? titleTe,
+    String? description,
+    String? descriptionTe,
+    String? imageUrl,
+    List<String>? ingredients,
+    List<String>? ingredientsTe,
+    List<String>? instructions,
+    List<String>? instructionsTe,
+    int? cookTimeMinutes,
+    int? servings,
+    String? category,
+    String? region,
+    bool? isVegetarian,
+    double? rating,
+    int? calories,
+    double? protein,
+    double? carbs,
+    double? fat,
+    String? difficulty,
+    List<String>? tags,
+  }) {
+    return Recipe(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      titleTe: titleTe ?? this.titleTe,
+      description: description ?? this.description,
+      descriptionTe: descriptionTe ?? this.descriptionTe,
+      imageUrl: imageUrl ?? this.imageUrl,
+      ingredients: ingredients ?? this.ingredients,
+      ingredientsTe: ingredientsTe ?? this.ingredientsTe,
+      instructions: instructions ?? this.instructions,
+      instructionsTe: instructionsTe ?? this.instructionsTe,
+      cookTimeMinutes: cookTimeMinutes ?? this.cookTimeMinutes,
+      servings: servings ?? this.servings,
+      category: category ?? this.category,
+      region: region ?? this.region,
+      isVegetarian: isVegetarian ?? this.isVegetarian,
+      rating: rating ?? this.rating,
+      calories: calories ?? this.calories,
+      protein: protein ?? this.protein,
+      carbs: carbs ?? this.carbs,
+      fat: fat ?? this.fat,
+      difficulty: difficulty ?? this.difficulty,
+      tags: tags ?? this.tags,
+    );
   }
 
   @override
@@ -157,12 +294,127 @@ class Recipe extends Equatable {
         difficulty,
         tags,
       ];
+
+  @override
+  String toString() => 'Recipe(id: $id, title: $title, region: $region)';
 }
 
-// ==================== ANDHRA REGION ====================
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-// 1. Andhra Chicken Curry (Non-Veg)
+class RecipeCategories {
+  static const String breakfast = 'Breakfast';
+  static const String lunch = 'Lunch';
+  static const String dinner = 'Dinner';
+  static const String snacks = 'Snacks';
+  static const String desserts = 'Desserts';
+  static const String beverages = 'Beverages';
+
+  static const List<String> all = [
+    breakfast,
+    lunch,
+    dinner,
+    snacks,
+    desserts,
+    beverages,
+  ];
+
+  static const Map<String, String> telugu = {
+    breakfast: 'ప్రాతః భోజనం',
+    lunch: 'మధ్యాహ్న భోజనం',
+    dinner: 'రాత్రి భోజనం',
+    snacks: 'స్నాక్స్',
+    desserts: 'మిఠాయిలు',
+    beverages: 'పానీయాలు',
+  };
+}
+
+class RecipeRegions {
+  static const String andhra = 'Andhra';
+  static const String telangana = 'Telangana';
+  static const String rayalaseema = 'Rayalaseema';
+
+  static const List<String> all = [andhra, telangana, rayalaseema];
+
+  static const Map<String, String> telugu = {
+    andhra: 'ఆంధ్ర',
+    telangana: 'తెలంగాణ',
+    rayalaseema: 'రాయలసీమ',
+  };
+}
+
+class RecipeDifficulty {
+  static const String easy = 'Easy';
+  static const String medium = 'Medium';
+  static const String hard = 'Hard';
+
+  static const List<String> all = [easy, medium, hard];
+
+  static const Map<String, String> telugu = {
+    easy: 'సులభం',
+    medium: 'మధ్యస్థం',
+    hard: 'కష్టం',
+  };
+}
+
+// ─── Filter & Search Helpers ──────────────────────────────────────────────────
+
+extension RecipeListExtensions on List<Recipe> {
+  /// Filter by category
+  List<Recipe> byCategory(String category) =>
+      where((r) => r.category == category).toList();
+
+  /// Filter by region
+  List<Recipe> byRegion(String region) =>
+      where((r) => r.region == region).toList();
+
+  /// Filter vegetarian only
+  List<Recipe> get vegetarianOnly => where((r) => r.isVegetarian).toList();
+
+  /// Filter non-vegetarian only
+  List<Recipe> get nonVegOnly => where((r) => !r.isVegetarian).toList();
+
+  /// Filter quick recipes (≤30 mins)
+  List<Recipe> get quickOnly => where((r) => r.isQuick).toList();
+
+  /// Filter by max cook time
+  List<Recipe> maxCookTime(int minutes) =>
+      where((r) => r.cookTimeMinutes <= minutes).toList();
+
+  /// Filter by difficulty
+  List<Recipe> byDifficulty(String difficulty) =>
+      where((r) => r.difficulty == difficulty).toList();
+
+  /// Sort by rating descending
+  List<Recipe> get topRated =>
+      [...this]..sort((a, b) => b.rating.compareTo(a.rating));
+
+  /// Sort by cook time ascending
+  List<Recipe> get quickestFirst =>
+      [...this]..sort((a, b) => a.cookTimeMinutes.compareTo(b.cookTimeMinutes));
+
+  /// Search by title, tags, or ingredients (Telugu + English)
+  List<Recipe> search(String query) {
+    if (query.trim().isEmpty) return this;
+    final q = query.toLowerCase().trim();
+    return where((r) {
+      return r.title.toLowerCase().contains(q) ||
+          r.titleTe.contains(q) ||
+          r.description.toLowerCase().contains(q) ||
+          r.descriptionTe.contains(q) ||
+          r.tags.any((t) => t.toLowerCase().contains(q)) ||
+          r.ingredients.any((i) => i.toLowerCase().contains(q)) ||
+          r.ingredientsTe.any((i) => i.contains(q)) ||
+          r.region.toLowerCase().contains(q) ||
+          r.category.toLowerCase().contains(q);
+    }).toList();
+  }
+}
+
+// ─── Sample Data (25 authentic Telugu recipes) ───────────────────────────────
+
 final List<Recipe> sampleRecipes = [
+  // ==================== ANDHRA REGION ====================
+
   const Recipe(
     id: '1',
     title: 'Andhra Chicken Curry',
@@ -184,7 +436,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp garam masala',
       '3 tbsp oil',
       'Salt to taste',
-      'Fresh coriander leaves'
+      'Fresh coriander leaves',
     ],
     ingredientsTe: [
       '500 గ్రా చికెన్',
@@ -198,7 +450,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ గరం మసాలా',
       '3 టేబుల్ స్పూన్లు నూనె',
       'రుచికి సరిపడా ఉప్పు',
-      'కొత్తిమీర'
+      'కొత్తిమీర',
     ],
     instructions: [
       'Wash chicken pieces and marinate with turmeric, salt, and chili powder for 30 minutes',
@@ -207,7 +459,7 @@ final List<Recipe> sampleRecipes = [
       'Add tomatoes and cook until soft',
       'Add marinated chicken and cook for 10 minutes',
       'Add coriander powder and garam masala, cook until chicken is tender',
-      'Garnish with fresh coriander leaves and serve hot'
+      'Garnish with fresh coriander leaves and serve hot',
     ],
     instructionsTe: [
       'చికెన్ ముక్కలు కడిగి, పసుపు, ఉప్పు, కారంతో 30 నిమిషాలు మ్యారినేట్ చేయండి',
@@ -216,7 +468,7 @@ final List<Recipe> sampleRecipes = [
       'టమాటోలు వేసి మెత్తబడేవరకు ఉడికించండి',
       'మ్యారినేట్ చేసిన చికెన్ వేసి 10 నిమిషాలు ఉడికించండి',
       'ధనియాల పొడి, గరం మసాలా వేసి చికెన్ మెత్తబడేవరకు ఉడికించండి',
-      'కొత్తిమీరతో అలంకరించి వేడివేడిగా సర్వ్ చేయండి'
+      'కొత్తిమీరతో అలంకరించి వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 45,
     servings: 4,
@@ -232,7 +484,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['chicken', 'spicy', 'andhra', 'curry'],
   ),
 
-  // 2. Gongura Pachadi (Veg)
   const Recipe(
     id: '2',
     title: 'Gongura Pachadi',
@@ -249,7 +500,7 @@ final List<Recipe> sampleRecipes = [
       '3 garlic cloves',
       '2 tbsp oil',
       'Salt to taste',
-      'Pinch of asafoetida'
+      'Pinch of asafoetida',
     ],
     ingredientsTe: [
       '2 కప్పులు గోంగూర ఆకులు',
@@ -259,7 +510,7 @@ final List<Recipe> sampleRecipes = [
       '3 వెల్లుల్లి రెబ్బలు',
       '2 టేబుల్ స్పూన్లు నూనె',
       'రుచికి సరిపడా ఉప్పు',
-      'చిటికెడు ఇంగువ'
+      'చిటికెడు ఇంగువ',
     ],
     instructions: [
       'Wash and dry gongura leaves thoroughly',
@@ -267,7 +518,7 @@ final List<Recipe> sampleRecipes = [
       'Add gongura leaves and sauté until wilted',
       'Cool and grind to coarse paste with salt',
       'Temper with mustard seeds and asafoetida',
-      'Serve with hot rice and ghee'
+      'Serve with hot rice and ghee',
     ],
     instructionsTe: [
       'గోంగూర ఆకులు కడిగి బాగా ఆరవేయండి',
@@ -275,7 +526,7 @@ final List<Recipe> sampleRecipes = [
       'గోంగూర ఆకులు వేసి వాడేవరకు వేయించండి',
       'చల్లార్చి, ఉప్పుతో కచ్చాగా గ్రైండ్ చేయండి',
       'ఆవాలు, ఇంగువతో తాలింపు వేయండి',
-      'వేడి అన్నంలో నెయ్యితో సర్వ్ చేయండి'
+      'వేడి అన్నంలో నెయ్యితో సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 20,
     servings: 4,
@@ -291,7 +542,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['gongura', 'pachadi', 'andhra', 'chutney'],
   ),
 
-  // 3. Pesarattu (Veg - Breakfast)
   const Recipe(
     id: '3',
     title: 'Pesarattu',
@@ -308,7 +558,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp cumin seeds',
       'Salt to taste',
       'Oil for cooking',
-      'Chopped onions for topping'
+      'Chopped onions for topping',
     ],
     ingredientsTe: [
       '1 కప్పు పెసరపప్పు',
@@ -318,7 +568,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ జీలకర్ర',
       'రుచికి సరిపడా ఉప్పు',
       'వేయించడానికి నూనె',
-      'టాపింగ్ కోసం తరిగిన ఉల్లిపాయలు'
+      'టాపింగ్ కోసం తరిగిన ఉల్లిపాయలు',
     ],
     instructions: [
       'Soak moong dal and rice for 4-6 hours',
@@ -326,7 +576,7 @@ final List<Recipe> sampleRecipes = [
       'Heat dosa pan and pour batter, spread thin',
       'Top with chopped onions and oil',
       'Cook until crispy and golden',
-      'Serve with ginger chutney'
+      'Serve with ginger chutney',
     ],
     instructionsTe: [
       'పెసరపప్పు, బియ్యం 4-6 గంటలు నానబెట్టండి',
@@ -334,7 +584,7 @@ final List<Recipe> sampleRecipes = [
       'దోశ పాన్ వేడి చేసి, పిండి పోసి పల్చగా పరచండి',
       'తరిగిన ఉల్లిపాయలు, నూనె పైన వేయండి',
       'కరకరలాడేవరకు, బంగారు రంగు వచ్చేవరకు ఉడికించండి',
-      'అల్లం పచ్చడితో సర్వ్ చేయండి'
+      'అల్లం పచ్చడితో సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 30,
     servings: 4,
@@ -350,7 +600,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['pesarattu', 'dosa', 'breakfast', 'healthy'],
   ),
 
-  // 4. Royyala Iguru (Non-Veg)
   const Recipe(
     id: '4',
     title: 'Royyala Iguru',
@@ -370,7 +619,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp garam masala',
       '3 tbsp oil',
       'Curry leaves',
-      'Salt to taste'
+      'Salt to taste',
     ],
     ingredientsTe: [
       '500 గ్రా శుద్ధం చేసిన రొయ్యలు',
@@ -383,7 +632,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ గరం మసాలా',
       '3 టేబుల్ స్పూన్లు నూనె',
       'కరివేపాకు',
-      'రుచికి సరిపడా ఉప్పు'
+      'రుచికి సరిపడా ఉప్పు',
     ],
     instructions: [
       'Clean and devein prawns, marinate with turmeric and salt',
@@ -392,7 +641,7 @@ final List<Recipe> sampleRecipes = [
       'Add all spice powders and fry until oil separates',
       'Add prawns and cook on high heat for 5-7 minutes',
       'Fry until prawns are cooked and coated with masala',
-      'Serve hot with rice or as starter'
+      'Serve hot with rice or as starter',
     ],
     instructionsTe: [
       'రొయ్యలు శుద్ధం చేసి, పసుపు, ఉప్పుతో మ్యారినేట్ చేయండి',
@@ -401,7 +650,7 @@ final List<Recipe> sampleRecipes = [
       'అన్ని మసాలా పొడులు వేసి నూనె వేరుకావాలి',
       'రొయ్యలు వేసి ఎక్కువ మంటపై 5-7 నిమిషాలు ఉడికించండి',
       'రొయ్యలు ఉడికి మసాలా పట్టేవరకు వేయించండి',
-      'అన్నంలో లేదా స్టార్టర్‌గా వేడివేడిగా సర్వ్ చేయండి'
+      'అన్నంలో లేదా స్టార్టర్‌గా వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 25,
     servings: 3,
@@ -417,7 +666,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['prawns', 'seafood', 'andhra', 'spicy'],
   ),
 
-  // 5. Gutti Vankaya Kura (Veg)
   const Recipe(
     id: '5',
     title: 'Gutti Vankaya Kura',
@@ -438,7 +686,7 @@ final List<Recipe> sampleRecipes = [
       '2 tsp red chili powder',
       'Tamarind pulp (lemon sized)',
       '3 tbsp oil',
-      'Salt to taste'
+      'Salt to taste',
     ],
     ingredientsTe: [
       '8-10 చిన్న వంకాయలు',
@@ -452,7 +700,7 @@ final List<Recipe> sampleRecipes = [
       '2 టీ స్పూన్లు కారం',
       'నిమ్మకాయ సైజు చింతపండు పులుసు',
       '3 టేబుల్ స్పూన్లు నూనె',
-      'రుచికి సరిపడా ఉప్పు'
+      'రుచికి సరిపడా ఉప్పు',
     ],
     instructions: [
       'Roast peanuts, sesame, coconut, and red chilies, then grind to powder',
@@ -461,7 +709,7 @@ final List<Recipe> sampleRecipes = [
       'Heat oil, temper with mustard and cumin',
       'Arrange stuffed eggplants in pan, add turmeric and tamarind water',
       'Cover and cook on low for 15-20 minutes until tender',
-      'Serve hot with rice'
+      'Serve hot with rice',
     ],
     instructionsTe: [
       'వేరుశనగ, నువ్వులు, కొబ్బరి, మిరపకాయలు వేయించి పొడి చేయండి',
@@ -470,7 +718,7 @@ final List<Recipe> sampleRecipes = [
       'నూనె వేడి చేసి, ఆవాలు, జీలకర్రతో తాలింపు',
       'స్టఫ్ చేసిన వంకాయలు పాన్‌లో పేర్చి, పసుపు, చింతపండు నీళ్లు పోయండి',
       'మూత పెట్టి 15-20 నిమిషాలు మెత్తబడేవరకు ఉడికించండి',
-      'వేడివేడిగా అన్నంలో సర్వ్ చేయండి'
+      'వేడివేడిగా అన్నంలో సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 35,
     servings: 4,
@@ -488,7 +736,6 @@ final List<Recipe> sampleRecipes = [
 
   // ==================== TELANGANA REGION ====================
 
-  // 6. Hyderabadi Biryani (Non-Veg)
   const Recipe(
     id: '6',
     title: 'Hyderabadi Chicken Biryani',
@@ -511,7 +758,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp saffron in warm milk',
       '4 tbsp ghee',
       'Salt to taste',
-      'Whole spices (cardamom, cloves, cinnamon, bay leaf)'
+      'Whole spices (cardamom, cloves, cinnamon, bay leaf)',
     ],
     ingredientsTe: [
       '500 గ్రా బాస్మతి బియ్యం',
@@ -526,7 +773,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ కుంకుమపువ్వు వేడి పాలలో',
       '4 టేబుల్ స్పూన్లు నెయ్యి',
       'రుచికి సరిపడా ఉప్పు',
-      'అఖండ మసాలాలు (యాలకులు, లవంగాలు, దాల్చిని, బిర్యానీ ఆకు)'
+      'అఖండ మసాలాలు',
     ],
     instructions: [
       'Marinate chicken with yogurt, ginger-garlic, biryani masala for 2 hours',
@@ -536,7 +783,7 @@ final List<Recipe> sampleRecipes = [
       'Layer parboiled rice on top',
       'Top with remaining onions, saffron milk, and ghee',
       'Seal pot with dough and cook on dum for 45 minutes',
-      'Serve hot with raita'
+      'Serve hot with raita',
     ],
     instructionsTe: [
       'పెరుగు, అల్లం-వెల్లుల్లి, బిర్యానీ మసాలాతో చికెన్ 2 గంటలు మ్యారినేట్ చేయండి',
@@ -546,7 +793,7 @@ final List<Recipe> sampleRecipes = [
       'సగం ఉడికిన బియ్యం పేర్చండి',
       'మిగతా ఉల్లిపాయలు, కుంకుమపువ్వు పాలు, నెయ్యి పైన వేయండి',
       'పిండితో మూత పెట్టి 45 నిమిషాలు దమ్ చేయండి',
-      'రైతాతో వేడివేడిగా సర్వ్ చేయండి'
+      'రైతాతో వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 90,
     servings: 6,
@@ -562,7 +809,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['biryani', 'hyderabadi', 'special', 'rice'],
   ),
 
-  // 7. Haleem (Non-Veg)
   const Recipe(
     id: '7',
     title: 'Hyderabadi Haleem',
@@ -582,7 +828,7 @@ final List<Recipe> sampleRecipes = [
       '2 tbsp ghee',
       '1 tbsp haleem masala',
       'Lemon wedges',
-      'Salt to taste'
+      'Salt to taste',
     ],
     ingredientsTe: [
       '500 గ్రా ఎముకలతో మటన్',
@@ -595,7 +841,7 @@ final List<Recipe> sampleRecipes = [
       '2 టేబుల్ స్పూన్లు నెయ్యి',
       '1 టేబుల్ స్పూన్ హలీం మసాలా',
       'నిమ్మకాయ ముక్కలు',
-      'రుచికి సరిపడా ఉప్పు'
+      'రుచికి సరిపడా ఉప్పు',
     ],
     instructions: [
       'Soak wheat and lentils overnight',
@@ -604,7 +850,7 @@ final List<Recipe> sampleRecipes = [
       'Blend cooked wheat and mutton together to paste',
       'Heat ghee, add green chilies and haleem masala',
       'Mix everything together and cook for 30 more minutes',
-      'Serve topped with fried onions, mint, lemon, and ghee'
+      'Serve topped with fried onions, mint, lemon, and ghee',
     ],
     instructionsTe: [
       'గోధుమ రవ్వ, పప్పు రాత్రంతా నానబెట్టండి',
@@ -613,7 +859,7 @@ final List<Recipe> sampleRecipes = [
       'ఉడికిన గోధుమ, మటన్ కలిపి ముద్దగా గ్రైండ్ చేయండి',
       'నెయ్యి వేడి చేసి, పచ్చి మిరపకాయలు, హలీం మసాలా వేయండి',
       'అన్నీ కలిపి మరో 30 నిమిషాలు ఉడికించండి',
-      'వేయించిన ఉల్లిపాయలు, పుదీనా, నిమ్మకాయ, నెయ్యితో సర్వ్ చేయండి'
+      'వేయించిన ఉల్లిపాయలు, పుదీనా, నిమ్మకాయ, నెయ్యితో సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 180,
     servings: 6,
@@ -629,7 +875,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['haleem', 'hyderabadi', 'ramadan', 'special'],
   ),
 
-  // 8. Double Ka Meetha (Veg - Dessert)
   const Recipe(
     id: '8',
     title: 'Double Ka Meetha',
@@ -648,7 +893,7 @@ final List<Recipe> sampleRecipes = [
       '2 tbsp raisins',
       '1 tsp cardamom powder',
       'Few saffron strands',
-      '2 tbsp rose water'
+      '2 tbsp rose water',
     ],
     ingredientsTe: [
       '6 బ్రెడ్ ముక్కలు',
@@ -659,7 +904,7 @@ final List<Recipe> sampleRecipes = [
       '1/4 కప్పు కిస్మిస్',
       '2 టేబుల్ స్పూన్లు యాలకుల పొడి',
       'కొన్ని కుంకుమపువ్వు రేణువులు',
-      '2 టేబుల్ స్పూన్లు గులాబీ నీరు'
+      '2 టేబుల్ స్పూన్లు గులాబీ నీరు',
     ],
     instructions: [
       'Cut bread into triangles and fry in ghee until golden',
@@ -668,7 +913,7 @@ final List<Recipe> sampleRecipes = [
       'Add fried bread pieces to milk and simmer',
       'Cook until bread absorbs milk and becomes soft',
       'Garnish with fried nuts, raisins, and rose water',
-      'Serve warm or chilled'
+      'Serve warm or chilled',
     ],
     instructionsTe: [
       'బ్రెడ్‌ను త్రిభుజాలుగా కోసి నెయ్యిలో బంగారు రంగు వచ్చేవరకు వేయించండి',
@@ -677,7 +922,7 @@ final List<Recipe> sampleRecipes = [
       'వేయించిన బ్రెడ్ పాలలో వేసి మెత్తగా ఉడికించండి',
       'బ్రెడ్ పాలు పీల్చుకుని మెత్తబడేవరకు ఉడికించండి',
       'వేయించిన జీడిపప్పు, కిస్మిస్, గులాబీ నీరు పైన వేయండి',
-      'వెచ్చగా లేదా చల్లగా సర్వ్ చేయండి'
+      'వెచ్చగా లేదా చల్లగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 45,
     servings: 6,
@@ -693,7 +938,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['dessert', 'hyderabadi', 'sweet', 'bread'],
   ),
 
-  // 9. Sarva Pindi (Veg - Breakfast)
   const Recipe(
     id: '9',
     title: 'Sarva Pindi',
@@ -713,7 +957,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp chili powder',
       '3 tbsp oil',
       'Salt to taste',
-      'Warm water as needed'
+      'Warm water as needed',
     ],
     ingredientsTe: [
       '2 కప్పులు బియ్యం పిండి',
@@ -726,7 +970,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ కారం',
       '3 టేబుల్ స్పూన్లు నూనె',
       'రుచికి సరిపడా ఉప్పు',
-      'అవసరమైంత వేడి నీరు'
+      'అవసరమైంత వేడి నీరు',
     ],
     instructions: [
       'Mix rice flour with peanuts, sesame, onions, chilies, ginger, cumin',
@@ -735,7 +979,7 @@ final List<Recipe> sampleRecipes = [
       'Make holes and add oil in them',
       'Cover and cook on medium heat until crispy',
       'Flip and cook other side',
-      'Serve hot with chutney'
+      'Serve hot with chutney',
     ],
     instructionsTe: [
       'బియ్యం పిండిలో వేరుశనగ, నువ్వులు, ఉల్లిపాయలు, మిరపకాయలు, అల్లం, జీలకర్ర కలపండి',
@@ -744,7 +988,7 @@ final List<Recipe> sampleRecipes = [
       'గుంతలు చేసి నూనె పోయండి',
       'మూత పెట్టి మధ్యస్థ మంటపై కరకరలాడేవరకు ఉడికించండి',
       'తిప్పి రెండవ వైపు ఉడికించండి',
-      'పచ్చడితో వేడివేడిగా సర్వ్ చేయండి'
+      'పచ్చడితో వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 30,
     servings: 4,
@@ -760,7 +1004,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['sarva pindi', 'telangana', 'breakfast', 'rice'],
   ),
 
-  // 10. Kodi Kura (Non-Veg)
   const Recipe(
     id: '10',
     title: 'Telangana Kodi Kura',
@@ -781,7 +1024,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp garam masala',
       '10 curry leaves',
       '4 tbsp oil',
-      'Salt to taste'
+      'Salt to taste',
     ],
     ingredientsTe: [
       '1 కిలో నాటు కోడి',
@@ -795,7 +1038,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ గరం మసాలా',
       '10 కరివేపాకు రెబ్బలు',
       '4 టేబుల్ స్పూన్లు నూనె',
-      'రుచికి సరిపడా ఉప్పు'
+      'రుచికి సరిపడా ఉప్పు',
     ],
     instructions: [
       'Clean and cut country chicken into pieces',
@@ -805,7 +1048,7 @@ final List<Recipe> sampleRecipes = [
       'Add tomato puree and cook until oil separates',
       'Add marinated chicken and cook for 15 minutes',
       'Add coconut paste and cook until chicken is tender',
-      'Finish with garam masala and serve'
+      'Finish with garam masala and serve',
     ],
     instructionsTe: [
       'నాటు కోడిని శుద్ధం చేసి ముక్కలు చేయండి',
@@ -815,7 +1058,7 @@ final List<Recipe> sampleRecipes = [
       'టమాటో ప్యూరీ వేసి నూనె వేరుకావాలి',
       'మ్యారినేట్ చికెన్ వేసి 15 నిమిషాలు ఉడికించండి',
       'కొబ్బరి ముద్ద వేసి చికెన్ మెత్తబడేవరకు ఉడికించండి',
-      'గరం మసాలా వేసి సర్వ్ చేయండి'
+      'గరం మసాలా వేసి సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 60,
     servings: 5,
@@ -833,12 +1076,11 @@ final List<Recipe> sampleRecipes = [
 
   // ==================== RAYALASEEMA REGION ====================
 
-  // 11. Rayalaseema Chicken Fry (Non-Veg)
   const Recipe(
     id: '11',
     title: 'Rayalaseema Chicken Fry',
     titleTe: 'రాయలసీమ కోడి వేపుడు',
-    description: 'Extra spicy dry chicken fry with special Rayaalaseema masala',
+    description: 'Extra spicy dry chicken fry with special Rayalaseema masala',
     descriptionTe: 'ప్రత్యేక రాయలసీమ మసాలాతో ఎక్స్ట్రా స్పైసీ డ్రై చికెన్',
     imageUrl:
         'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=800',
@@ -854,7 +1096,7 @@ final List<Recipe> sampleRecipes = [
       '4 tbsp oil',
       'Curry leaves',
       'Lemon juice',
-      'Salt to taste'
+      'Salt to taste',
     ],
     ingredientsTe: [
       '500 గ్రా చికెన్',
@@ -868,7 +1110,7 @@ final List<Recipe> sampleRecipes = [
       '4 టేబుల్ స్పూన్లు నూనె',
       'కరివేపాకు',
       'నిమ్మరసం',
-      'రుచికి సరిపడా ఉప్పు'
+      'రుచికి సరిపడా ఉప్పు',
     ],
     instructions: [
       'Marinate chicken with all spices and ginger-garlic for 2 hours',
@@ -877,7 +1119,7 @@ final List<Recipe> sampleRecipes = [
       'Cook on high heat for 5 minutes without stirring',
       'Stir and cook until chicken is dry and crispy',
       'Add curry leaves and toss',
-      'Finish with lemon juice and serve hot'
+      'Finish with lemon juice and serve hot',
     ],
     instructionsTe: [
       'అన్ని మసాలాలు, అల్లం-వెల్లుల్లితో చికెన్ 2 గంటలు మ్యారినేట్ చేయండి',
@@ -886,7 +1128,7 @@ final List<Recipe> sampleRecipes = [
       'ఎక్కువ మంటపై 5 నిమిషాలు కలపకుండా ఉడికించండి',
       'కలిపి చికెన్ ఎండి కరకరలాడేవరకు వేయించండి',
       'కరివేపాకు వేసి కలపండి',
-      'నిమ్మరసంతో ముగించి వేడివేడిగా సర్వ్ చేయండి'
+      'నిమ్మరసంతో ముగించి వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 35,
     servings: 3,
@@ -902,7 +1144,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['chicken', 'rayalaseema', 'spicy', 'fry'],
   ),
 
-  // 12. Ragi Sangati (Veg)
   const Recipe(
     id: '12',
     title: 'Ragi Sangati',
@@ -918,7 +1159,7 @@ final List<Recipe> sampleRecipes = [
       '4 cups water',
       '1 tsp salt',
       '1 tbsp ghee',
-      'Spicy chicken or mutton curry for serving'
+      'Spicy chicken or mutton curry for serving',
     ],
     ingredientsTe: [
       '2 కప్పులు రాగి పిండి',
@@ -926,7 +1167,7 @@ final List<Recipe> sampleRecipes = [
       '4 కప్పులు నీరు',
       '1 టీ స్పూన్ ఉప్పు',
       '1 టేబుల్ స్పూన్ నెయ్యి',
-      'సర్వ్ చేయడానికి కారమైన చికెన్ లేదా మటన్ కూర'
+      'సర్వ్ చేయడానికి కారమైన చికెన్ లేదా మటన్ కూర',
     ],
     instructions: [
       'Cook rice with water and salt until mushy',
@@ -934,7 +1175,7 @@ final List<Recipe> sampleRecipes = [
       'Cook on low heat for 10-15 minutes, stirring constantly',
       'Add ghee and mix well',
       'Wet hands and shape into round balls while hot',
-      'Serve with spicy curry'
+      'Serve with spicy curry',
     ],
     instructionsTe: [
       'బియ్యం నీళ్లు, ఉప్పుతో మెత్తగా ఉడికించండి',
@@ -942,7 +1183,7 @@ final List<Recipe> sampleRecipes = [
       'తక్కువ మంటపై 10-15 నిమిషాలు నిరంతరం కలుపుతూ ఉడికించండి',
       'నెయ్యి వేసి బాగా కలపండి',
       'చేతులు తడిపి వేడిగా ఉండగానే గుండ్రంగా ఉండేలా చేయండి',
-      'కారమైన కూరతో సర్వ్ చేయండి'
+      'కారమైన కూరతో సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 40,
     servings: 4,
@@ -958,7 +1199,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['ragi', 'sangati', 'rayalaseema', 'healthy'],
   ),
 
-  // 13. Natu Kodi Pulusu (Non-Veg)
   const Recipe(
     id: '13',
     title: 'Natu Kodi Pulusu',
@@ -980,7 +1220,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp mustard seeds',
       'Curry leaves',
       '4 tbsp oil',
-      'Salt to taste'
+      'Salt to taste',
     ],
     ingredientsTe: [
       '1 కిలో నాటు కోడి',
@@ -995,7 +1235,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ ఆవాలు',
       'కరివేపాకు',
       '4 టేబుల్ స్పూన్లు నూనె',
-      'రుచికి సరిపడా ఉప్పు'
+      'రుచికి సరిపడా ఉప్పు',
     ],
     instructions: [
       'Soak tamarind in warm water and extract pulp',
@@ -1005,7 +1245,7 @@ final List<Recipe> sampleRecipes = [
       'Add tomatoes and cook until soft',
       'Add marinated chicken and cook for 15 minutes',
       'Add tamarind pulp and simmer until chicken is tender',
-      'Serve hot with ragi sangati'
+      'Serve hot with ragi sangati',
     ],
     instructionsTe: [
       'చింతపండును వేడి నీళ్లలో నానబెట్టి పులుసు తీయండి',
@@ -1015,7 +1255,7 @@ final List<Recipe> sampleRecipes = [
       'టమాటోలు వేసి మెత్తబడేవరకు ఉడికించండి',
       'మ్యారినేట్ చికెన్ వేసి 15 నిమిషాలు ఉడికించండి',
       'చింతపండు పులుసు వేసి కోడి మెత్తబడేవరకు ఉడికించండి',
-      'రాగి సంగటితో వేడివేడిగా సర్వ్ చేయండి'
+      'రాగి సంగటితో వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 55,
     servings: 5,
@@ -1031,9 +1271,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['chicken', 'pulusu', 'tamarind', 'rayalaseema'],
   ),
 
-  // ==================== BREAKFAST ITEMS ====================
-
-  // 14. Idli (Veg)
   const Recipe(
     id: '14',
     title: 'Soft Idli',
@@ -1047,14 +1284,14 @@ final List<Recipe> sampleRecipes = [
       '1 cup urad dal',
       '1/2 tsp fenugreek seeds',
       'Salt to taste',
-      'Oil for greasing'
+      'Oil for greasing',
     ],
     ingredientsTe: [
       '2 కప్పులు ఇడ్లీ బియ్యం',
       '1 కప్పు మినపపప్పు',
       '1/2 టీ స్పూన్ మెంతులు',
       'రుచికి సరిపడా ఉప్పు',
-      'పూసడానికి నూనె'
+      'పూసడానికి నూనె',
     ],
     instructions: [
       'Soak rice and dal separately for 6 hours',
@@ -1063,7 +1300,7 @@ final List<Recipe> sampleRecipes = [
       'Mix both batters, add salt and ferment overnight',
       'Grease idli molds and pour batter',
       'Steam for 10-12 minutes until cooked',
-      'Serve hot with sambar and chutney'
+      'Serve hot with sambar and chutney',
     ],
     instructionsTe: [
       'బియ్యం, పప్పు వేర్వేరుగా 6 గంటలు నానబెట్టండి',
@@ -1072,7 +1309,7 @@ final List<Recipe> sampleRecipes = [
       'రెండు పిండులు కలిపి, ఉప్పు వేసి రాత్రంతా పులియబెట్టండి',
       'ఇడ్లీ పళ్ళెలకు నూనె పూసి పిండి పోయండి',
       '10-12 నిమిషాలు ఆవిరి మీద ఉడికించండి',
-      'సాంబార్, పచ్చడితో వేడివేడిగా సర్వ్ చేయండి'
+      'సాంబార్, పచ్చడితో వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 30,
     servings: 4,
@@ -1088,7 +1325,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['idli', 'breakfast', 'steamed', 'healthy'],
   ),
 
-  // 15. Dosa (Veg)
   const Recipe(
     id: '15',
     title: 'Crispy Dosa',
@@ -1103,7 +1339,7 @@ final List<Recipe> sampleRecipes = [
       '1/4 cup poha (flattened rice)',
       '1/2 tsp fenugreek seeds',
       'Salt to taste',
-      'Oil for cooking'
+      'Oil for cooking',
     ],
     ingredientsTe: [
       '2 కప్పులు దోశ బియ్యం',
@@ -1111,7 +1347,7 @@ final List<Recipe> sampleRecipes = [
       '1/4 కప్పు అటుకులు',
       '1/2 టీ స్పూన్ మెంతులు',
       'రుచికి సరిపడా ఉప్పు',
-      'వేయించడానికి నూనె'
+      'వేయించడానికి నూనె',
     ],
     instructions: [
       'Soak rice, dal, and poha for 6 hours',
@@ -1120,7 +1356,7 @@ final List<Recipe> sampleRecipes = [
       'Pour ladleful of batter and spread in circular motion',
       'Drizzle oil around edges',
       'Cook until golden and crispy',
-      'Fold and serve hot with chutney'
+      'Fold and serve hot with chutney',
     ],
     instructionsTe: [
       'బియ్యం, పప్పు, అటుకులు 6 గంటలు నానబెట్టండి',
@@ -1129,7 +1365,7 @@ final List<Recipe> sampleRecipes = [
       'పిండి పోసి వృత్తాకారంగా పల్చగా పరచండి',
       'అంచుల చుట్టూ నూనె పోయండి',
       'బంగారు రంగు, కరకరలాడేవరకు ఉడికించండి',
-      'మడిచి పచ్చడితో వేడివేడిగా సర్వ్ చేయండి'
+      'మడిచి పచ్చడితో వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 25,
     servings: 4,
@@ -1145,7 +1381,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['dosa', 'breakfast', 'crispy', 'rice'],
   ),
 
-  // 16. Upma (Veg)
   const Recipe(
     id: '16',
     title: 'Rava Upma',
@@ -1167,7 +1402,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp chana dal',
       '8 curry leaves',
       '2 tbsp oil',
-      'Salt to taste'
+      'Salt to taste',
     ],
     ingredientsTe: [
       '1 కప్పు రవ్వ',
@@ -1182,7 +1417,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ శనగపప్పు',
       '8 కరివేపాకు రెబ్బలు',
       '2 టేబుల్ స్పూన్లు నూనె',
-      'రుచికి సరిపడా ఉప్పు'
+      'రుచికి సరిపడా ఉప్పు',
     ],
     instructions: [
       'Dry roast semolina until fragrant, set aside',
@@ -1192,7 +1427,7 @@ final List<Recipe> sampleRecipes = [
       'Add water and salt, bring to boil',
       'Slowly add roasted semolina while stirring',
       'Cook on low for 5 minutes until thickened',
-      'Serve hot'
+      'Serve hot',
     ],
     instructionsTe: [
       'రవ్వ వాసన వచ్చేవరకు ఎండు వేయించి పక్కన పెట్టండి',
@@ -1202,7 +1437,7 @@ final List<Recipe> sampleRecipes = [
       'నీళ్లు, ఉప్పు వేసి మరిగించండి',
       'వేడి నీళ్లలో ఎండు వేయించిన రవ్వ నెమ్మదిగా కలుపుతూ పోయండి',
       '5 నిమిషాలు తక్కువ మంటపై గట్టిపడేవరకు ఉడికించండి',
-      'వేడివేడిగా సర్వ్ చేయండి'
+      'వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 20,
     servings: 3,
@@ -1218,9 +1453,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['upma', 'breakfast', 'semolina', 'quick'],
   ),
 
-  // ==================== SNACKS ====================
-
-  // 17. Mirchi Bajji (Veg)
   const Recipe(
     id: '17',
     title: 'Mirchi Bajji',
@@ -1240,7 +1472,7 @@ final List<Recipe> sampleRecipes = [
       'Pinch of baking soda',
       'Salt to taste',
       'Oil for deep frying',
-      'Stuffing: 2 tbsp tamarind paste mixed with 1 tsp cumin powder'
+      'Stuffing: 2 tbsp tamarind paste mixed with 1 tsp cumin powder',
     ],
     ingredientsTe: [
       '10-12 మందంగా ఉన్న పచ్చి మిరపకాయలు',
@@ -1253,7 +1485,7 @@ final List<Recipe> sampleRecipes = [
       'చిటికెడు సోడా',
       'రుచికి సరిపడా ఉప్పు',
       'లోతుగా వేయించడానికి నూనె',
-      'స్టఫింగ్: 2 టేబుల్ స్పూన్లు చింతపండు ముద్ద, 1 టీ స్పూన్ జీలకర్ర పొడి కలిపినవి'
+      'స్టఫింగ్: 2 టేబుల్ స్పూన్లు చింతపండు ముద్ద, 1 టీ స్పూన్ జీలకర్ర పొడి',
     ],
     instructions: [
       'Wash and dry chilies, make a slit keeping stem intact',
@@ -1262,7 +1494,7 @@ final List<Recipe> sampleRecipes = [
       'Heat oil to medium-high temperature',
       'Dip stuffed chilies in batter and coat evenly',
       'Deep fry until golden and crispy',
-      'Serve hot with onion slices and green chili chutney'
+      'Serve hot with onion slices and green chili chutney',
     ],
     instructionsTe: [
       'మిరపకాయలు కడిగి ఆరవేయండి, కాడితో సహా సన్నగా కోయండి',
@@ -1271,7 +1503,7 @@ final List<Recipe> sampleRecipes = [
       'నూనె మధ్యస్థ-ఎక్కువ ఉష్ణోగ్రతకు వేడి చేయండి',
       'స్టఫ్ చేసిన మిరపకాయలను పిండిలో ముంచి సమానంగా పూయండి',
       'బంగారు రంగు, కరకరలాడేవరకు లోతుగా వేయించండి',
-      'ఉల్లిపాయ ముక్కలు, పచ్చి మిరపకాయ పచ్చడితో వేడివేడిగా సర్వ్ చేయండి'
+      'ఉల్లిపాయ ముక్కలు, పచ్చి మిరపకాయ పచ్చడితో వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 30,
     servings: 4,
@@ -1287,7 +1519,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['bajji', 'snack', 'spicy', 'street food'],
   ),
 
-  // 18. Punugulu (Veg)
   const Recipe(
     id: '18',
     title: 'Punugulu',
@@ -1304,7 +1535,7 @@ final List<Recipe> sampleRecipes = [
       '2 tbsp coriander leaves, chopped',
       '1 tsp cumin seeds',
       'Salt to taste',
-      'Oil for deep frying'
+      'Oil for deep frying',
     ],
     ingredientsTe: [
       '2 కప్పులు ఇడ్లీ పిండి (కొద్దిగా పుల్లగా)',
@@ -1314,7 +1545,7 @@ final List<Recipe> sampleRecipes = [
       '2 టేబుల్ స్పూన్లు కొత్తిమీర, తరిగినది',
       '1 టీ స్పూన్ జీలకర్ర',
       'రుచికి సరిపడా ఉప్పు',
-      'లోతుగా వేయించడానికి నూనె'
+      'లోతుగా వేయించడానికి నూనె',
     ],
     instructions: [
       'Take slightly sour idli batter in a bowl',
@@ -1323,7 +1554,7 @@ final List<Recipe> sampleRecipes = [
       'Heat oil to medium-high temperature',
       'Wet hands, take small portions and drop in hot oil',
       'Fry until golden brown and crispy',
-      'Drain on paper towels and serve hot with coconut chutney'
+      'Drain on paper towels and serve hot with coconut chutney',
     ],
     instructionsTe: [
       'బౌల్‌లో కొద్దిగా పుల్లగా ఉన్న ఇడ్లీ పిండి తీసుకోండి',
@@ -1332,7 +1563,7 @@ final List<Recipe> sampleRecipes = [
       'నూనె మధ్యస్థ-ఎక్కువ ఉష్ణోగ్రతకు వేడి చేయండి',
       'చేతులు తడిపి, చిన్న ముద్దలు తీసి వేడి నూనెలో వదలండి',
       'బంగారు రంగు, కరకరలాడేవరకు వేయించండి',
-      'పేపర్ టవల్సపై ఆరవేసి, కొబ్బరి పచ్చడితో వేడివేడిగా సర్వ్ చేయండి'
+      'పేపర్ టవల్సపై ఆరవేసి, కొబ్బరి పచ్చడితో వేడివేడిగా సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 25,
     servings: 4,
@@ -1348,9 +1579,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['punugulu', 'snack', 'fritters', 'evening'],
   ),
 
-  // ==================== DESSERTS ====================
-
-  // 19. Ariselu (Veg)
   const Recipe(
     id: '19',
     title: 'Ariselu',
@@ -1367,7 +1595,7 @@ final List<Recipe> sampleRecipes = [
       '2 tbsp sesame seeds',
       '1/2 tsp cardamom powder',
       'Oil for deep frying',
-      'Ghee for greasing'
+      'Ghee for greasing',
     ],
     ingredientsTe: [
       '2 కప్పులు బియ్యం పిండి',
@@ -1376,7 +1604,7 @@ final List<Recipe> sampleRecipes = [
       '2 టేబుల్ స్పూన్లు నువ్వులు',
       '1/2 టీ స్పూన్ యాలకుల పొడి',
       'లోతుగా వేయించడానికి నూనె',
-      'పూసడానికి నెయ్యి'
+      'పూసడానికి నెయ్యి',
     ],
     instructions: [
       'Soak rice for 6 hours, drain and dry grind to fine powder',
@@ -1386,7 +1614,7 @@ final List<Recipe> sampleRecipes = [
       'Gradually add rice flour to make soft dough',
       'Grease hands, make small discs',
       'Deep fry on low heat until golden',
-      'Drain and cool before storing'
+      'Drain and cool before storing',
     ],
     instructionsTe: [
       'బియ్యం 6 గంటలు నానబెట్టి, నీరు పోసి ఎండు గ్రైండ్ చేయండి',
@@ -1396,7 +1624,7 @@ final List<Recipe> sampleRecipes = [
       'నెమ్మదిగా బియ్యం పిండి కలిపి మెత్తని పిండి చేయండి',
       'చేతులకు నెయ్యి పూసి, చిన్న గుండ్రని డిస్కులు చేయండి',
       'తక్కువ మంటపై బంగారు రంగు వచ్చేవరకు లోతుగా వేయించండి',
-      'ఆరవేసి నిల్వ చేయండి'
+      'ఆరవేసి నిల్వ చేయండి',
     ],
     cookTimeMinutes: 60,
     servings: 15,
@@ -1412,7 +1640,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['ariselu', 'sweet', 'festival', 'traditional'],
   ),
 
-  // 20. Pootharekulu (Veg)
   const Recipe(
     id: '20',
     title: 'Pootharekulu',
@@ -1429,7 +1656,7 @@ final List<Recipe> sampleRecipes = [
       '1/4 cup cashews, chopped',
       '1/4 cup almonds, chopped',
       '1/2 tsp cardamom powder',
-      'Parchment paper for rolling'
+      'Parchment paper for rolling',
     ],
     ingredientsTe: [
       'రైస్ బ్యాటర్ (పల్చటి షీట్ల కోసం)',
@@ -1438,7 +1665,7 @@ final List<Recipe> sampleRecipes = [
       '1/4 కప్పు జీడిపప్పు, తరిగినది',
       '1/4 కప్పు బాదం, తరిగినది',
       '1/2 టీ స్పూన్ యాలకుల పొడి',
-      'రోల్ చేయడానికి పార్చ్మెంట్ పేపర్'
+      'రోల్ చేయడానికి పార్చ్మెంట్ పేపర్',
     ],
     instructions: [
       'Make very thin rice sheets using traditional method or buy ready-made',
@@ -1448,7 +1675,7 @@ final List<Recipe> sampleRecipes = [
       'Sprinkle sugar-nut mixture evenly',
       'Roll tightly into cylinder',
       'Repeat layers for thicker rolls',
-      'Wrap and store airtight'
+      'Wrap and store airtight',
     ],
     instructionsTe: [
       'సాంప్రదాయ పద్ధతిలో లేదా సిద్ధంగా కొన్న పల్చటి బియ్యం షీట్లు తీసుకోండి',
@@ -1458,7 +1685,7 @@ final List<Recipe> sampleRecipes = [
       'చక్కెర-జీడిపప్పు మిశ్రమం సమానంగా చల్లండి',
       'గట్టిగా సిలిండర్‌లా రోల్ చేయండి',
       'మందంగా కావాలంటే మరిన్ని షీట్లు పేర్చండి',
-      'చుట్టి గాలి రాకుండా నిల్వ చేయండి'
+      'చుట్టి గాలి రాకుండా నిల్వ చేయండి',
     ],
     cookTimeMinutes: 45,
     servings: 10,
@@ -1474,9 +1701,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['pootharekulu', 'sweet', 'atreyapuram', 'special'],
   ),
 
-  // ==================== BEVERAGES ====================
-
-  // 21. Masala Chaas (Veg)
   const Recipe(
     id: '21',
     title: 'Masala Chaas',
@@ -1494,7 +1718,7 @@ final List<Recipe> sampleRecipes = [
       '2 green chilies, chopped',
       'Few curry leaves, chopped',
       'Fresh coriander',
-      'Ice cubes'
+      'Ice cubes',
     ],
     ingredientsTe: [
       '2 కప్పులు పెరుగు (కొద్దిగా పుల్లగా)',
@@ -1506,7 +1730,7 @@ final List<Recipe> sampleRecipes = [
       '2 పచ్చి మిరపకాయలు, తరిగినవి',
       'కొన్ని కరివేపాకు రెబ్బలు, తరిగినవి',
       'కొత్తిమీర',
-      'ఐస్ క్యూబ్స్'
+      'ఐస్ క్యూబ్స్',
     ],
     instructions: [
       'Whisk yogurt until smooth',
@@ -1514,7 +1738,7 @@ final List<Recipe> sampleRecipes = [
       'Add all spices, ginger, chilies, and curry leaves',
       'Mix well and chill for 30 minutes',
       'Serve in tall glasses with ice',
-      'Garnish with fresh coriander'
+      'Garnish with fresh coriander',
     ],
     instructionsTe: [
       'పెరుగును మెత్తగా విప్పండి',
@@ -1522,7 +1746,7 @@ final List<Recipe> sampleRecipes = [
       'అన్ని మసాలాలు, అల్లం, మిరపకాయలు, కరివేపాకు కలపండి',
       'బాగా కలిపి 30 నిమిషాలు చల్లబరచండి',
       'ఎత్తైన గ్లాసులలో ఐస్‌తో సర్వ్ చేయండి',
-      'కొత్తిమీరతో అలంకరించండి'
+      'కొత్తిమీరతో అలంకరించండి',
     ],
     cookTimeMinutes: 10,
     servings: 4,
@@ -1538,7 +1762,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['chaas', 'buttermilk', 'summer', 'drink'],
   ),
 
-  // 22. Filter Coffee (Veg)
   const Recipe(
     id: '22',
     title: 'South Indian Filter Coffee',
@@ -1552,14 +1775,14 @@ final List<Recipe> sampleRecipes = [
       '1 cup water',
       '2 cups milk',
       '2-3 tsp sugar (per cup)',
-      'Traditional filter coffee maker'
+      'Traditional filter coffee maker',
     ],
     ingredientsTe: [
       '3 టేబుల్ స్పూన్లు కాఫీ పొడి (ఫిల్టర్ గ్రైండ్)',
       '1 కప్పు నీరు',
       '2 కప్పులు పాలు',
       '2-3 టీ స్పూన్లు చక్కెర (కప్పుకు)',
-      'సాంప్రదాయ ఫిల్టర్ కాఫీ మేకర్'
+      'సాంప్రదాయ ఫిల్టర్ కాఫీ మేకర్',
     ],
     instructions: [
       'Add coffee powder to upper chamber of filter',
@@ -1568,7 +1791,7 @@ final List<Recipe> sampleRecipes = [
       'Let decoction drip for 15-20 minutes',
       'Boil milk and froth by pouring between cups',
       'Mix 1/4 cup decoction with 3/4 cup hot milk',
-      'Add sugar and serve in traditional dabarah'
+      'Add sugar and serve in traditional dabarah',
     ],
     instructionsTe: [
       'ఫిల్టర్ పై భాగంలో కాఫీ పొడి వేయండి',
@@ -1577,7 +1800,7 @@ final List<Recipe> sampleRecipes = [
       '15-20 నిమిషాలు డికాక్షన్ బట్టెలేయండి',
       'పాలు మరిగించి గ్లాసుల మధ్య పోసి పొంగించండి',
       '1/4 కప్పు డికాక్షన్, 3/4 కప్పు వేడి పాలు కలపండి',
-      'చక్కెర కలిపి సాంప్రదాయ దబారాలో సర్వ్ చేయండి'
+      'చక్కెర కలిపి సాంప్రదాయ దబారాలో సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 25,
     servings: 4,
@@ -1593,9 +1816,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['coffee', 'filter coffee', 'breakfast', 'beverage'],
   ),
 
-  // ==================== DINNER ITEMS ====================
-
-  // 23. Chapala Pulusu (Non-Veg)
   const Recipe(
     id: '23',
     title: 'Chapala Pulusu',
@@ -1616,7 +1836,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp fenugreek seeds',
       '10 curry leaves',
       '4 tbsp oil',
-      'Salt to taste'
+      'Salt to taste',
     ],
     ingredientsTe: [
       '500 గ్రా చేప (కోళ్లు లేదా కెట్‌ఫిష్)',
@@ -1630,7 +1850,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ మెంతులు',
       '10 కరివేపాకు రెబ్బలు',
       '4 టేబుల్ స్పూన్లు నూనె',
-      'రుచికి సరిపడా ఉప్పు'
+      'రుచికి సరిపడా ఉప్పు',
     ],
     instructions: [
       'Clean fish and marinate with turmeric, salt for 30 minutes',
@@ -1640,7 +1860,7 @@ final List<Recipe> sampleRecipes = [
       'Add ginger-garlic, tomatoes, and cook',
       'Add spices and tamarind pulp, bring to boil',
       'Add fried fish and simmer for 10 minutes',
-      'Garnish with curry leaves and serve'
+      'Garnish with curry leaves and serve',
     ],
     instructionsTe: [
       'చేప శుద్ధం చేసి, పసుపు, ఉప్పుతో 30 నిమిషాలు మ్యారినేట్ చేయండి',
@@ -1650,7 +1870,7 @@ final List<Recipe> sampleRecipes = [
       'అల్లం-వెల్లుల్లి, టమాటోలు వేసి ఉడికించండి',
       'మసాలాలు, చింతపండు పులుసు వేసి మరిగించండి',
       'వేయించిన చేపలు వేసి 10 నిమిషాలు మరిగించండి',
-      'కరివేపాకుతో అలంకరించి సర్వ్ చేయండి'
+      'కరివేపాకుతో అలంకరించి సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 40,
     servings: 4,
@@ -1666,7 +1886,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['fish', 'pulusu', 'coastal', 'dinner'],
   ),
 
-  // 24. Palakura Pappu (Veg)
   const Recipe(
     id: '24',
     title: 'Palakura Pappu',
@@ -1688,7 +1907,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp cumin seeds',
       '2 dry red chilies',
       '2 tbsp oil',
-      'Salt to taste'
+      'Salt to taste',
     ],
     ingredientsTe: [
       '1 కప్పు కందిపప్పు',
@@ -1703,7 +1922,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ జీలకర్ర',
       '2 ఎండు మిరపకాయలు',
       '2 టేబుల్ స్పూన్లు నూనె',
-      'రుచికి సరిపడా ఉప్పు'
+      'రుచికి సరిపడా ఉప్పు',
     ],
     instructions: [
       'Pressure cook dal with turmeric until mushy',
@@ -1713,7 +1932,7 @@ final List<Recipe> sampleRecipes = [
       'Add tomatoes and cook until soft',
       'Add spinach and cook until wilted',
       'Add mashed dal, chili powder, salt, and water',
-      'Simmer for 10 minutes and serve hot with rice'
+      'Simmer for 10 minutes and serve hot with rice',
     ],
     instructionsTe: [
       'పసుపుతో కందిపప్పు ప్రెజర్ కుక్ చేసి మెత్తబడేలా చేయండి',
@@ -1723,7 +1942,7 @@ final List<Recipe> sampleRecipes = [
       'టమాటోలు వేసి మెత్తబడేవరకు ఉడికించండి',
       'పాలకూర వేసి వాడేవరకు ఉడికించండి',
       'మెత్తగా చేసిన పప్పు, కారం, ఉప్పు, నీళ్లు కలపండి',
-      '10 నిమిషాలు మరిగించి వేడివేడిగా అన్నంలో సర్వ్ చేయండి'
+      '10 నిమిషాలు మరిగించి వేడివేడిగా అన్నంలో సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 35,
     servings: 4,
@@ -1739,7 +1958,6 @@ final List<Recipe> sampleRecipes = [
     tags: ['dal', 'spinach', 'healthy', 'comfort food'],
   ),
 
-  // 25. Mutton Keema (Non-Veg)
   const Recipe(
     id: '25',
     title: 'Mutton Keema',
@@ -1761,7 +1979,7 @@ final List<Recipe> sampleRecipes = [
       '1 tsp cumin seeds',
       '4 tbsp oil',
       'Fresh coriander',
-      'Salt to taste'
+      'Salt to taste',
     ],
     ingredientsTe: [
       '500 గ్రా మటన్ కీమా',
@@ -1776,7 +1994,7 @@ final List<Recipe> sampleRecipes = [
       '1 టీ స్పూన్ జీలకర్ర',
       '4 టేబుల్ స్పూన్లు నూనె',
       'కొత్తిమీర',
-      'రుచికి సరిపడా ఉప్పు'
+      'రుచికి సరిపడా ఉప్పు',
     ],
     instructions: [
       'Marinate keema with turmeric, salt, and chili powder for 30 minutes',
@@ -1786,7 +2004,7 @@ final List<Recipe> sampleRecipes = [
       'Add marinated keema and cook for 15 minutes',
       'Add coriander powder, garam masala, and peas',
       'Cook until keema is done and peas are tender',
-      'Garnish with coriander and serve'
+      'Garnish with coriander and serve',
     ],
     instructionsTe: [
       'కీమాను పసుపు, ఉప్పు, కారంతో 30 నిమిషాలు మ్యారినేట్ చేయండి',
@@ -1796,7 +2014,7 @@ final List<Recipe> sampleRecipes = [
       'మ్యారినేట్ కీమా వేసి 15 నిమిషాలు ఉడికించండి',
       'ధనియాల పొడి, గరం మసాలా, బటానీలు కలపండి',
       'కీమా ఉడికి, బటానీలు మెత్తబడేవరకు ఉడికించండి',
-      'కొత్తిమీరతో అలంకరించి సర్వ్ చేయండి'
+      'కొత్తిమీరతో అలంకరించి సర్వ్ చేయండి',
     ],
     cookTimeMinutes: 45,
     servings: 4,

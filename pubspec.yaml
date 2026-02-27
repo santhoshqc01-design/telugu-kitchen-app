@@ -44,9 +44,18 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
+  
   assets:
+    - assets/lottie/    # ← must include this folder
     - assets/images/
-    - assets/lottie/
     - assets/fonts/
-    # - assets/models/vosk-te/  # ⚠️ COMMENTED OUT — remove if folder doesn't exist
+
+## 🎬 Animation Sequence (~3.2s total)
+# 0ms    → Orange gradient background expands + subtle scale
+# 200ms  → Lottie cooking animation fades + springs in
+# 300ms  → Lottie starts playing (duration auto-matched to your file)
+# 700ms  → "Ruchi / రుచి" title slides up
+# 950ms  → Telugu tagline slides up
+# 1200ms → "Made for Telugu food lovers" badge fades in
+# 1300ms → Pulsating dots appear
+# 3200ms → Fades + slides into HomeScreen
