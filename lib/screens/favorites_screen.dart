@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
-import '../blocs/favorites/favorites_bloc.dart';
+import '../blocs/recipe/recipe_bloc.dart';
 import '../blocs/language/language_bloc.dart';
 import '../l10n/app_localizations.dart';
 import '../models/recipe_model.dart';
@@ -21,58 +21,70 @@ class FavoritesScreen extends StatelessWidget {
         backgroundColor: Colors.orange.shade800,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          // Sort favorites
+          BlocBuilder<RecipeBloc, RecipeState>(
+            builder: (context, state) {
+              if (state is! RecipeLoaded || state.favoriteCount == 0) {
+                return const SizedBox.shrink();
+              }
+              return IconButton(
+                icon: const Icon(Icons.sort_rounded),
+                tooltip: isTelugu ? 'క్రమపద్ధతి' : 'Sort',
+                onPressed: () => _showSortOptions(context, isTelugu),
+              );
+            },
+          ),
+        ],
       ),
-      body: BlocBuilder<FavoritesBloc, FavoritesState>(
+      body: BlocBuilder<RecipeBloc, RecipeState>(
         builder: (context, state) {
-          if (state is FavoritesLoading) {
+          // RecipeBloc not yet loaded
+          if (state is RecipeLoading || state is RecipeInitial) {
             return _buildShimmerList();
           }
 
-          if (state is FavoritesLoaded) {
-            if (state.favorites.isEmpty) {
-              return _buildEmptyState(isTelugu, context);
+          if (state is RecipeLoaded) {
+            final favorites = state.favoriteRecipes;
+
+            if (favorites.isEmpty) {
+              return _buildEmptyState(context, isTelugu);
             }
 
             return RefreshIndicator(
               onRefresh: () async {
-                context.read<FavoritesBloc>().add(const LoadFavorites());
+                // Favorites live in RecipeBloc state — nothing to reload
+                // but pull-to-refresh is a nice UX affordance
               },
               child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.favorites.length,
-                itemBuilder: (context, index) {
-                  final recipe = state.favorites[index];
-                  return _buildFavoriteCard(
-                    context,
-                    recipe,
-                    isTelugu,
-                    index,
-                  );
-                },
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                itemCount: favorites.length,
+                itemBuilder: (context, i) => _FavoriteCard(
+                  recipe: favorites[i],
+                  isTelugu: isTelugu,
+                ),
               ),
             );
           }
 
+          // Error state
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline,
+                Icon(Icons.error_outline_rounded,
                     size: 64, color: Colors.grey.shade400),
                 const SizedBox(height: 16),
                 Text(
-                  isTelugu ? 'లోడ్ చేయడంలో లోపం' : 'Error loading favorites',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey.shade600,
-                  ),
+                  isTelugu ? 'లోపం జరిగింది' : 'Something went wrong',
+                  style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    context.read<FavoritesBloc>().add(const LoadFavorites());
-                  },
-                  child: Text(isTelugu ? 'మళ్ళీ ప్రయత్నించండి' : 'Retry'),
+                FilledButton.icon(
+                  onPressed: () =>
+                      context.read<RecipeBloc>().add(const LoadRecipes()),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(isTelugu ? 'మళ్ళీ ప్రయత్నించండి' : 'Retry'),
                 ),
               ],
             ),
@@ -82,351 +94,228 @@ class FavoritesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(bool isTelugu, BuildContext context) {
+  // ── Empty State ────────────────────────────────────────────────────────────
+
+  Widget _buildEmptyState(BuildContext context, bool isTelugu) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Animated heart icon
-          TweenAnimationBuilder(
-            tween: Tween<double>(begin: 0.8, end: 1.2),
-            duration: const Duration(milliseconds: 1000),
-            curve: Curves.easeInOut,
-            builder: (context, value, child) {
-              return Transform.scale(
-                scale: value,
-                child: Icon(
-                  Icons.favorite_border,
-                  size: 100,
-                  color: Colors.grey.shade300,
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          Text(
-            isTelugu ? 'ఇంకా ఇష్టమైనవి లేవు' : 'No favorites yet',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade700,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Pulsing heart
+            _PulsingHeart(),
+            const SizedBox(height: 24),
+            Text(
+              isTelugu ? 'ఇంకా ఇష్టమైనవి లేవు' : 'No favorites yet',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
+            const SizedBox(height: 12),
+            Text(
               isTelugu
-                  ? 'గుండె బటన్ నొక్కి మీకు నచ్చిన వంటకాలను ఇక్కడ చేర్చండి'
-                  : 'Tap the heart button on recipes you love to add them here',
+                  ? 'వంటకాలపై గుండె బటన్ నొక్కి మీకు నచ్చినవి ఇక్కడ చేర్చండి'
+                  : 'Tap the heart on any recipe to save it here',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 color: Colors.grey.shade500,
                 height: 1.5,
               ),
             ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () {
-              // Navigate to home tab (index 0)
-              // This requires a callback or navigation setup
-            },
-            icon: const Icon(Icons.explore),
-            label: Text(
-              isTelugu ? 'వంటకాలను చూడండి' : 'Browse Recipes',
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade800,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () {
-              context.read<FavoritesBloc>().add(const LoadFavorites());
-            },
-            child: Text(
-              isTelugu ? 'మళ్ళీ లోడ్ చేయండి' : 'Refresh',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShimmerList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 5,
-      itemBuilder: (context, index) {
-        return Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(12),
-              leading: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              title: Container(
-                height: 16,
-                width: 150,
-                color: Colors.white,
-              ),
-              subtitle: Container(
-                height: 12,
-                width: 100,
-                margin: const EdgeInsets.only(top: 8),
-                color: Colors.white,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFavoriteCard(
-    BuildContext context,
-    Recipe recipe,
-    bool isTelugu,
-    int index,
-  ) {
-    return Dismissible(
-      key: Key(recipe.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(
-          color: Colors.red,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.delete, color: Colors.white, size: 32),
-            SizedBox(height: 4),
-            Text(
-              'Remove',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: () {
+                // Pop back to home tab — handled by IndexedStack in HomeScreen
+                // This button intentionally does nothing if we're already in
+                // the bottom nav; the user just taps the Home tab.
+              },
+              icon: const Icon(Icons.explore_rounded),
+              label: Text(isTelugu ? 'వంటకాలను చూడండి' : 'Browse Recipes'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.orange.shade800,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
               ),
             ),
           ],
         ),
       ),
-      confirmDismiss: (direction) async {
-        return await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(isTelugu ? 'తొలగించాలా?' : 'Remove?'),
-            content: Text(
-              isTelugu
-                  ? '${isTelugu ? recipe.titleTe : recipe.title} ని ఇష్టమైనవాటి నుండి తొలగించాలా?'
-                  : 'Remove ${isTelugu ? recipe.titleTe : recipe.title} from favorites?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(isTelugu ? 'రద్దు' : 'Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(
-                  isTelugu ? 'తొలగించు' : 'Remove',
-                  style: const TextStyle(color: Colors.red),
+    );
+  }
+
+  // ── Shimmer Loading ────────────────────────────────────────────────────────
+
+  Widget _buildShimmerList() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (_, __) => Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
-      onDismissed: (_) {
-        context.read<FavoritesBloc>().add(RemoveFavorite(recipe.id));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isTelugu
-                  ? '${recipe.titleTe} తొలగించబడింది'
-                  : '${recipe.title} removed',
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(height: 16, color: Colors.white),
+                      const SizedBox(height: 8),
+                      Container(height: 12, width: 120, color: Colors.white),
+                      const SizedBox(height: 8),
+                      Container(height: 12, width: 80, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            action: SnackBarAction(
-              label: isTelugu ? 'రద్దు' : 'Undo',
-              onPressed: () {
-                context.read<FavoritesBloc>().add(ToggleFavorite(recipe));
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Sort Options ───────────────────────────────────────────────────────────
+
+  void _showSortOptions(BuildContext context, bool isTelugu) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              isTelugu ? 'క్రమపద్ధతి' : 'Sort favorites',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.star_rounded, color: Colors.amber),
+              title: Text(isTelugu ? 'టాప్ రేటెడ్' : 'Top Rated'),
+              onTap: () {
+                Navigator.pop(context);
+                context
+                    .read<RecipeBloc>()
+                    .add(const SortRecipes(RecipeSortOrder.topRated));
               },
             ),
-          ),
-        );
-      },
+            ListTile(
+              leading: const Icon(Icons.timer_rounded, color: Colors.blue),
+              title: Text(isTelugu ? 'త్వరగా' : 'Quickest first'),
+              onTap: () {
+                Navigator.pop(context);
+                context
+                    .read<RecipeBloc>()
+                    .add(const SortRecipes(RecipeSortOrder.quickestFirst));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.sort_by_alpha_rounded),
+              title: Text(isTelugu ? 'A-Z క్రమం' : 'Alphabetical'),
+              onTap: () {
+                Navigator.pop(context);
+                context
+                    .read<RecipeBloc>()
+                    .add(const SortRecipes(RecipeSortOrder.alphabetical));
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Favorite Card (stateful for dismiss animation) ───────────────────────────
+
+class _FavoriteCard extends StatelessWidget {
+  final Recipe recipe;
+  final bool isTelugu;
+
+  const _FavoriteCard({required this.recipe, required this.isTelugu});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: Key('fav-${recipe.id}'),
+      direction: DismissDirection.endToStart,
+      // Confirm before removing
+      confirmDismiss: (_) => _confirmRemove(context),
+      onDismissed: (_) => _remove(context, showUndo: true),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade600,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.delete_rounded, color: Colors.white, size: 28),
+            const SizedBox(height: 4),
+            Text(
+              isTelugu ? 'తొలగించు' : 'Remove',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12),
+            ),
+          ],
+        ),
+      ),
       child: Hero(
         tag: 'favorite-${recipe.id}',
         child: Card(
           margin: const EdgeInsets.only(bottom: 12),
           elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: InkWell(
+            borderRadius: BorderRadius.circular(12),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => RecipeDetailScreen(recipe: recipe),
-              ),
+                  builder: (_) => RecipeDetailScreen(recipe: recipe)),
             ),
-            borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  // Image with shimmer loading
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 80,
-                      height: 80,
-                      child: Image.network(
-                        recipe.imageUrl,
-                        fit: BoxFit.cover,
-                        frameBuilder:
-                            (context, child, frame, wasSynchronouslyLoaded) {
-                          if (wasSynchronouslyLoaded) return child;
-                          return AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: frame != null
-                                ? child
-                                : Shimmer.fromColors(
-                                    baseColor: Colors.grey.shade300,
-                                    highlightColor: Colors.grey.shade100,
-                                    child: Container(color: Colors.white),
-                                  ),
-                          );
-                        },
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey.shade200,
-                          child: Icon(
-                            Icons.restaurant,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Content
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            if (recipe.isVegetarian)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade100,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'Veg',
-                                  style: TextStyle(
-                                    color: Colors.green.shade800,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            Expanded(
-                              child: Text(
-                                isTelugu ? recipe.titleTe : recipe.title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.timer,
-                              size: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${recipe.cookTimeMinutes} min',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Icon(
-                              Icons.trending_up,
-                              size: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              recipe.difficulty,
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const Spacer(),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.star,
-                                  size: 14,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  recipe.rating.toString(),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Favorite button
-                  IconButton(
-                    icon: const Icon(Icons.favorite, color: Colors.red),
-                    onPressed: () {
-                      _showRemoveDialog(context, recipe, isTelugu);
-                    },
-                  ),
+                  _buildThumbnail(),
+                  const SizedBox(width: 14),
+                  Expanded(child: _buildInfo(context)),
+                  _buildFavButton(context),
                 ],
               ),
             ),
@@ -436,47 +325,249 @@ class FavoritesScreen extends StatelessWidget {
     );
   }
 
-  void _showRemoveDialog(BuildContext context, Recipe recipe, bool isTelugu) {
-    showDialog(
+  // ── Thumbnail ──────────────────────────────────────────────────────────────
+
+  Widget _buildThumbnail() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: 80,
+        height: 80,
+        child: Image.network(
+          recipe.imageUrl,
+          fit: BoxFit.cover,
+          frameBuilder: (_, child, frame, sync) {
+            if (sync) return child;
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: frame != null
+                  ? child
+                  : Shimmer.fromColors(
+                      baseColor: Colors.grey.shade300,
+                      highlightColor: Colors.grey.shade100,
+                      child: Container(color: Colors.white),
+                    ),
+            );
+          },
+          errorBuilder: (_, __, ___) => Container(
+            color: recipe.regionColor.withValues(alpha: 0.15),
+            child: Center(
+              child: Icon(Icons.restaurant_rounded,
+                  color: recipe.regionColor.withValues(alpha: 0.5), size: 32),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Info Column ────────────────────────────────────────────────────────────
+
+  Widget _buildInfo(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Veg dot + title row
+        Row(
+          children: [
+            // Indian-standard veg/non-veg dot
+            Container(
+              width: 14,
+              height: 14,
+              margin: const EdgeInsets.only(right: 6),
+              decoration: BoxDecoration(
+                shape: BoxShape.rectangle,
+                borderRadius: BorderRadius.circular(2),
+                border: Border.all(
+                  color: recipe.isVegetarian
+                      ? const Color(0xFF2E7D32)
+                      : Colors.red,
+                  width: 1.5,
+                ),
+              ),
+              child: Center(
+                child: Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: recipe.isVegetarian
+                        ? const Color(0xFF2E7D32)
+                        : Colors.red,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                isTelugu ? recipe.titleTe : recipe.title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // Region chip
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: recipe.regionColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            isTelugu
+                ? (RecipeRegions.telugu[recipe.region] ?? recipe.region)
+                : recipe.region,
+            style: TextStyle(
+              fontSize: 10,
+              color: recipe.regionColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Stats row — uses model computed properties
+        Row(
+          children: [
+            _stat(Icons.timer_rounded, recipe.cookTimeShort, Colors.grey),
+            const SizedBox(width: 12),
+            _stat(Icons.star_rounded, recipe.ratingDisplay, Colors.amber),
+            const SizedBox(width: 12),
+            _stat(
+              recipe.difficultyIcon,
+              isTelugu
+                  ? (RecipeDifficulty.telugu[recipe.difficulty] ??
+                      recipe.difficulty)
+                  : recipe.difficulty,
+              recipe.difficultyColor,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _stat(IconData icon, String value, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 3),
+        Text(value,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+      ],
+    );
+  }
+
+  // ── Favorite Button ────────────────────────────────────────────────────────
+
+  Widget _buildFavButton(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.favorite_rounded, color: Colors.red, size: 22),
+      tooltip: isTelugu ? 'తొలగించు' : 'Remove',
+      onPressed: () => _confirmAndRemove(context),
+    );
+  }
+
+  // ── Remove Helpers ─────────────────────────────────────────────────────────
+
+  Future<bool?> _confirmRemove(BuildContext context) {
+    return showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isTelugu ? 'తొలగించాలా?' : 'Remove from favorites?'),
+      builder: (_) => AlertDialog(
+        title: Text(isTelugu ? 'తొలగించాలా?' : 'Remove favorite?'),
         content: Text(
           isTelugu
               ? '${recipe.titleTe} ని ఇష్టమైనవాటి నుండి తొలగించాలా?'
-              : 'Remove ${recipe.title} from your favorites?',
+              : 'Remove "${recipe.title}" from your favorites?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: Text(isTelugu ? 'రద్దు' : 'Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<FavoritesBloc>().add(RemoveFavorite(recipe.id));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    isTelugu
-                        ? '${recipe.titleTe} తొలగించబడింది'
-                        : '${recipe.title} removed',
-                  ),
-                  action: SnackBarAction(
-                    label: isTelugu ? 'రద్దు' : 'Undo',
-                    onPressed: () {
-                      context.read<FavoritesBloc>().add(ToggleFavorite(recipe));
-                    },
-                  ),
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
             child: Text(
               isTelugu ? 'తొలగించు' : 'Remove',
               style: const TextStyle(color: Colors.red),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _confirmAndRemove(BuildContext context) async {
+    final confirmed = await _confirmRemove(context);
+    if (confirmed == true && context.mounted) {
+      _remove(context, showUndo: true);
+    }
+  }
+
+  void _remove(BuildContext context, {bool showUndo = false}) {
+    context.read<RecipeBloc>().add(ToggleFavorite(recipe.id));
+    if (showUndo) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isTelugu
+                ? '${recipe.titleTe} తొలగించబడింది'
+                : '"${recipe.title}" removed',
+          ),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: isTelugu ? 'రద్దు' : 'Undo',
+            onPressed: () =>
+                context.read<RecipeBloc>().add(ToggleFavorite(recipe.id)),
+          ),
+        ),
+      );
+    }
+  }
+}
+
+// ─── Pulsing Heart Widget ─────────────────────────────────────────────────────
+
+class _PulsingHeart extends StatefulWidget {
+  @override
+  State<_PulsingHeart> createState() => _PulsingHeartState();
+}
+
+class _PulsingHeartState extends State<_PulsingHeart>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 0.9, end: 1.1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: Icon(
+        Icons.favorite_border_rounded,
+        size: 96,
+        color: Colors.grey.shade300,
       ),
     );
   }

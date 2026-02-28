@@ -1,18 +1,22 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'blocs/recipe/recipe_bloc.dart' as recipe_bloc;
+import 'blocs/recipe/recipe_bloc.dart';
 import 'blocs/voice/voice_bloc.dart';
 import 'blocs/language/language_bloc.dart';
-import 'blocs/favorites/favorites_bloc.dart' as favorites_bloc;
-import 'screens/home_screen.dart';
+import 'repositories/favorites_repository.dart';
 import 'screens/splash_screen.dart';
 import 'services/tts_service.dart';
 import 'services/speech_service.dart';
 import 'l10n/app_localizations.dart';
+import 'repositories/timer_learning_repository.dart';
+import 'service_locator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +25,12 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  final prefs = await SharedPreferences.getInstance();
+
+  ServiceLocator.instance.init(
+    learningRepo: TimerLearningRepository(prefs),
+  );
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -31,13 +41,19 @@ void main() async {
     ),
   );
 
-  runApp(const RuchiApp());
+  // Initialize SharedPreferences once at startup and inject into the bloc.
+  // This avoids async calls inside the bloc itself.
+  final favoritesRepo = await FavoritesRepository.create();
+
+  runApp(RuchiApp(favoritesRepository: favoritesRepo));
 }
 
-// ─── Root: Providers first, App second — two separate widgets ────────────────
+// ─── Root ─────────────────────────────────────────────────────────────────────
 
 class RuchiApp extends StatelessWidget {
-  const RuchiApp({super.key});
+  final FavoritesRepository favoritesRepository;
+
+  const RuchiApp({super.key, required this.favoritesRepository});
 
   @override
   Widget build(BuildContext context) {
@@ -53,29 +69,23 @@ class RuchiApp extends StatelessWidget {
           ),
         ),
         BlocProvider(
-          create: (_) =>
-              recipe_bloc.RecipeBloc()..add(const recipe_bloc.LoadRecipes()),
-        ),
-        BlocProvider(
-          create: (_) => favorites_bloc.FavoritesBloc()
-            ..add(const favorites_bloc.LoadFavorites()),
+          create: (_) => RecipeBloc(
+            favoritesRepository: favoritesRepository,
+          )..add(const LoadRecipes()),
         ),
       ],
-      // ✅ _RuchiMaterialApp is a SEPARATE widget — it gets its own context
-      // that is fully below MultiBlocProvider, so all BLoCs are accessible
       child: const _RuchiMaterialApp(),
     );
   }
 }
 
-// ─── Separate widget so context is guaranteed below MultiBlocProvider ─────────
+// ─── Rest of file unchanged from previous session ─────────────────────────────
 
 class _RuchiMaterialApp extends StatelessWidget {
   const _RuchiMaterialApp();
 
   @override
   Widget build(BuildContext context) {
-    // Now context.watch works because this widget IS below MultiBlocProvider
     final languageState = context.watch<LanguageBloc>().state;
 
     return MaterialApp(
@@ -104,7 +114,6 @@ class _RuchiMaterialApp extends StatelessWidget {
 
   ThemeData _buildLightTheme() {
     const seedColor = Color(0xFFE65100);
-
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.light,
@@ -113,13 +122,11 @@ class _RuchiMaterialApp extends StatelessWidget {
       tertiary: const Color(0xFF2E7D32),
       error: const Color(0xFFB71C1C),
     );
-
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      textTheme: GoogleFonts.notoSansTeluguTextTheme(
-        _buildTextTheme(colorScheme),
-      ),
+      textTheme:
+          GoogleFonts.notoSansTeluguTextTheme(_buildTextTheme(colorScheme)),
       appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
@@ -141,8 +148,7 @@ class _RuchiMaterialApp extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
+              color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
         ),
         clipBehavior: Clip.antiAlias,
         color: colorScheme.surface,
@@ -152,9 +158,7 @@ class _RuchiMaterialApp extends StatelessWidget {
         backgroundColor: colorScheme.surfaceContainerHighest,
         selectedColor: colorScheme.primaryContainer,
         labelStyle: GoogleFonts.notoSansTelugu(fontSize: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         side: BorderSide.none,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -163,13 +167,10 @@ class _RuchiMaterialApp extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: GoogleFonts.notoSansTelugu(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
+              fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -177,32 +178,26 @@ class _RuchiMaterialApp extends StatelessWidget {
           backgroundColor: seedColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: seedColor, width: 2),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        hintStyle: TextStyle(
-          color: colorScheme.onSurfaceVariant,
-          fontSize: 14,
-        ),
+        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
       ),
       navigationBarTheme: NavigationBarThemeData(
         elevation: 0,
@@ -211,15 +206,12 @@ class _RuchiMaterialApp extends StatelessWidget {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return GoogleFonts.notoSansTelugu(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.primary,
-            );
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.primary);
           }
           return GoogleFonts.notoSansTelugu(
-            fontSize: 12,
-            color: colorScheme.onSurfaceVariant,
-          );
+              fontSize: 12, color: colorScheme.onSurfaceVariant);
         }),
       ),
       snackBarTheme: SnackBarThemeData(
@@ -230,8 +222,7 @@ class _RuchiMaterialApp extends StatelessWidget {
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
         clipBehavior: Clip.antiAlias,
         showDragHandle: true,
       ),
@@ -275,7 +266,6 @@ class _RuchiMaterialApp extends StatelessWidget {
 
   ThemeData _buildDarkTheme() {
     const seedColor = Color(0xFFFF7043);
-
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.dark,
@@ -284,7 +274,6 @@ class _RuchiMaterialApp extends StatelessWidget {
       tertiary: const Color(0xFF66BB6A),
       error: const Color(0xFFEF9A9A),
     );
-
     return _buildLightTheme().copyWith(
       colorScheme: colorScheme,
       scaffoldBackgroundColor: const Color(0xFF0F0F0F),
@@ -318,15 +307,10 @@ class _RuchiMaterialApp extends StatelessWidget {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return GoogleFonts.notoSansTelugu(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: seedColor,
-            );
+                fontSize: 12, fontWeight: FontWeight.w600, color: seedColor);
           }
           return GoogleFonts.notoSansTelugu(
-            fontSize: 12,
-            color: colorScheme.onSurfaceVariant,
-          );
+              fontSize: 12, color: colorScheme.onSurfaceVariant);
         }),
       ),
     );
@@ -335,85 +319,64 @@ class _RuchiMaterialApp extends StatelessWidget {
   TextTheme _buildTextTheme(ColorScheme colorScheme) {
     return TextTheme(
       displayLarge: GoogleFonts.notoSansTelugu(
-        fontSize: 57,
-        fontWeight: FontWeight.w400,
-        color: colorScheme.onSurface,
-      ),
+          fontSize: 57,
+          fontWeight: FontWeight.w400,
+          color: colorScheme.onSurface),
       displayMedium: GoogleFonts.notoSansTelugu(
-        fontSize: 45,
-        fontWeight: FontWeight.w400,
-        color: colorScheme.onSurface,
-      ),
+          fontSize: 45,
+          fontWeight: FontWeight.w400,
+          color: colorScheme.onSurface),
       displaySmall: GoogleFonts.notoSansTelugu(
-        fontSize: 36,
-        fontWeight: FontWeight.w400,
-        color: colorScheme.onSurface,
-      ),
+          fontSize: 36,
+          fontWeight: FontWeight.w400,
+          color: colorScheme.onSurface),
       headlineLarge: GoogleFonts.notoSansTelugu(
-        fontSize: 32,
-        fontWeight: FontWeight.w700,
-        color: colorScheme.onSurface,
-      ),
+          fontSize: 32,
+          fontWeight: FontWeight.w700,
+          color: colorScheme.onSurface),
       headlineMedium: GoogleFonts.notoSansTelugu(
-        fontSize: 28,
-        fontWeight: FontWeight.w600,
-        color: colorScheme.onSurface,
-      ),
+          fontSize: 28,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface),
       headlineSmall: GoogleFonts.notoSansTelugu(
-        fontSize: 24,
-        fontWeight: FontWeight.w600,
-        color: colorScheme.onSurface,
-      ),
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface),
       titleLarge: GoogleFonts.notoSansTelugu(
-        fontSize: 22,
-        fontWeight: FontWeight.w600,
-        color: colorScheme.onSurface,
-      ),
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface),
       titleMedium: GoogleFonts.notoSansTelugu(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: colorScheme.onSurface,
-        letterSpacing: 0.15,
-      ),
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface,
+          letterSpacing: 0.15),
       titleSmall: GoogleFonts.notoSansTelugu(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: colorScheme.onSurface,
-        letterSpacing: 0.1,
-      ),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: colorScheme.onSurface,
+          letterSpacing: 0.1),
       bodyLarge: GoogleFonts.notoSansTelugu(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        color: colorScheme.onSurface,
-        height: 1.6,
-      ),
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          color: colorScheme.onSurface,
+          height: 1.6),
       bodyMedium: GoogleFonts.notoSansTelugu(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: colorScheme.onSurface,
-        height: 1.5,
-      ),
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: colorScheme.onSurface,
+          height: 1.5),
       bodySmall: GoogleFonts.notoSansTelugu(
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
-        color: colorScheme.onSurfaceVariant,
-        height: 1.4,
-      ),
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          color: colorScheme.onSurfaceVariant,
+          height: 1.4),
       labelLarge: GoogleFonts.notoSansTelugu(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.1,
-      ),
+          fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.1),
       labelMedium: GoogleFonts.notoSansTelugu(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0.5,
-      ),
+          fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: 0.5),
       labelSmall: GoogleFonts.notoSansTelugu(
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0.5,
-      ),
+          fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.5),
     );
   }
 }
@@ -446,9 +409,14 @@ class _ConnectivityBanner extends StatefulWidget {
 
 class _ConnectivityBannerState extends State<_ConnectivityBanner>
     with SingleTickerProviderStateMixin {
+  final Connectivity _connectivity = Connectivity();
+  late StreamSubscription<List<ConnectivityResult>> _subscription;
+
   bool _isOnline = true;
   bool _showBanner = false;
   late AnimationController _animController;
+  late Animation<Offset> _slideAnim;
+  bool _initialCheckDone = false;
 
   @override
   void initState() {
@@ -457,55 +425,68 @@ class _ConnectivityBannerState extends State<_ConnectivityBanner>
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+
+    _connectivity.checkConnectivity().then((results) {
+      _isOnline = _isConnected(results);
+      _initialCheckDone = true;
+    });
+
+    _subscription = _connectivity.onConnectivityChanged.listen((results) {
+      if (!_initialCheckDone) return;
+      _onConnectivityChanged(_isConnected(results));
+    });
   }
 
   @override
   void dispose() {
+    _subscription.cancel();
     _animController.dispose();
     super.dispose();
   }
 
+  bool _isConnected(List<ConnectivityResult> results) =>
+      results.any((r) => r != ConnectivityResult.none);
+
   void _onConnectivityChanged(bool isOnline) {
+    if (!mounted) return;
+    final wasOnline = _isOnline;
     setState(() {
       _isOnline = isOnline;
       _showBanner = true;
     });
-    _animController.forward();
-
-    if (isOnline) {
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          _animController.reverse().then((_) {
-            if (mounted) setState(() => _showBanner = false);
-          });
-        }
-      });
+    _animController.forward(from: 0);
+    if (isOnline && !wasOnline) {
+      Future.delayed(const Duration(seconds: 3), _dismissBanner);
     }
+  }
+
+  void _dismissBanner() {
+    if (!mounted) return;
+    _animController.reverse().then((_) {
+      if (mounted) setState(() => _showBanner = false);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_showBanner) return const SizedBox.shrink();
-
     return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(0, -1),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: _animController,
-        curve: Curves.easeOut,
-      )),
+      position: _slideAnim,
       child: Material(
         color: _isOnline ? const Color(0xFF2E7D32) : const Color(0xFFB71C1C),
         elevation: 4,
         child: SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
                 Icon(
-                  _isOnline ? Icons.wifi : Icons.wifi_off,
+                  _isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
                   color: Colors.white,
                   size: 18,
                 ),
@@ -522,18 +503,11 @@ class _ConnectivityBannerState extends State<_ConnectivityBanner>
                     ),
                   ),
                 ),
-                if (!_isOnline)
-                  IconButton(
-                    icon:
-                        const Icon(Icons.close, color: Colors.white, size: 18),
-                    onPressed: () {
-                      _animController.reverse().then((_) {
-                        if (mounted) setState(() => _showBanner = false);
-                      });
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
+                GestureDetector(
+                  onTap: _dismissBanner,
+                  child: const Icon(Icons.close_rounded,
+                      color: Colors.white, size: 18),
+                ),
               ],
             ),
           ),

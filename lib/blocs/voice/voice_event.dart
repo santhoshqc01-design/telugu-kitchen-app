@@ -4,7 +4,7 @@ abstract class VoiceEvent extends Equatable {
   const VoiceEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
 class InitializeVoice extends VoiceEvent {
@@ -13,15 +13,17 @@ class InitializeVoice extends VoiceEvent {
 
 class StartListening extends VoiceEvent {
   final String localeId;
-  final bool isSearchMode; // ADDED
+
+  /// If true, result emits VoiceSearchResult; if false, runs command parser.
+  final bool isSearchMode;
 
   const StartListening({
-    this.localeId = 'te_IN',
-    this.isSearchMode = false, // ADDED
+    this.localeId = 'en_US',
+    this.isSearchMode = false,
   });
 
   @override
-  List<Object> get props => [localeId, isSearchMode]; // ADDED
+  List<Object?> get props => [localeId, isSearchMode];
 }
 
 class StopListening extends VoiceEvent {
@@ -30,26 +32,30 @@ class StopListening extends VoiceEvent {
 
 class SpeechResultReceived extends VoiceEvent {
   final String text;
-
   const SpeechResultReceived(this.text);
 
   @override
-  List<Object> get props => [text];
+  List<Object?> get props => [text];
 }
 
 class SpeakText extends VoiceEvent {
   final String text;
-  final String language;
+  final String? language; // e.g. 'te-IN', 'en-US'
   final double rate;
+
+  /// When true, VoiceBloc checks the text for time mentions after speaking
+  /// and emits VoiceTimerSuggested if found. Set to true from CookingModeScreen.
+  final bool suggestTimer;
 
   const SpeakText(
     this.text, {
-    this.language = 'te-IN',
+    this.language,
     this.rate = 0.5,
+    this.suggestTimer = false,
   });
 
   @override
-  List<Object> get props => [text, language, rate];
+  List<Object?> get props => [text, language, rate, suggestTimer];
 }
 
 class StopSpeaking extends VoiceEvent {
@@ -58,9 +64,8 @@ class StopSpeaking extends VoiceEvent {
 
 class ProcessVoiceCommand extends VoiceEvent {
   final String command;
-
   const ProcessVoiceCommand(this.command);
 
   @override
-  List<Object> get props => [command];
+  List<Object?> get props => [command];
 }

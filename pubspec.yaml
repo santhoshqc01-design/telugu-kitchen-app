@@ -29,13 +29,16 @@ dependencies:
   google_fonts: ^6.2.1        # was 4.0.4 — const map Dart3 fix
 
   # Utilities
-  shared_preferences: ^2.3.2  # was 2.2.2
+  shared_preferences: ^2.3.0  # was 2.2.2
   intl: ^0.20.2               # OK — matches flutter_localizations in Flutter 3.27+
   dio: ^5.7.0                 # was 5.4.0
-  connectivity_plus: ^6.0.3   # was 5.0.2 — AGP8 fix
-  share_plus: ^10.1.4         # was 7.2.1 — v1 embedding + new SharePlus API
+  connectivity_plus: ^6.0.0   # was 5.0.2 — AGP8 fix
+  share_plus: ^7.2.1         # was 7.2.1 — v1 embedding + new SharePlus API
   url_launcher: ^6.3.0        # was 6.2.2
   permission_handler: ^11.3.1 # was 10.4.5 — v1 embedding fix
+  http: ^1.2.0
+  path_provider: ^2.1.1  # temp directory for image export
+
 
 dev_dependencies:
   flutter_test:

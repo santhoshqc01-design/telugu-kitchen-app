@@ -1,7 +1,6 @@
 // lib/widgets/category_filter.dart
 
 import 'package:flutter/material.dart';
-import '../models/recipe_model.dart';
 
 class CategoryFilter extends StatelessWidget {
   final String? selectedCategory;

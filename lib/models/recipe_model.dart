@@ -67,7 +67,7 @@ class Recipe extends Equatable {
 
   /// Nutrition summary string
   String get nutritionSummary =>
-      '${calories} cal · ${protein.toStringAsFixed(0)}g protein · '
+      '$calories cal · ${protein.toStringAsFixed(0)}g protein · '
       '${carbs.toStringAsFixed(0)}g carbs · ${fat.toStringAsFixed(0)}g fat';
 
   /// True if the recipe is quick (under 30 mins)
