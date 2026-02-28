@@ -606,6 +606,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   }
 
   // ── Ingredients & Instructions Tabs ───────────────────────────────────────
+  // Using IndexedStack + toggle buttons instead of TabBarView to avoid the
+  // bounded-height constraint that was hiding bottom ingredients.
 
   Widget _buildIngredientsAndInstructions(
     AppLocalizations l10n,
@@ -613,58 +615,58 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     bool isTablet,
   ) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Tab bar
+        // Toggle button row (replaces TabBar)
         Container(
           decoration: BoxDecoration(
             color: Colors.grey.shade100,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: TabBar(
-            controller: _tabController,
-            indicator: BoxDecoration(
-              color: Colors.orange.shade800,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            indicatorSize: TabBarIndicatorSize.tab,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.grey.shade600,
-            labelStyle: const TextStyle(fontWeight: FontWeight.w700),
-            tabs: [
-              Tab(text: isTelugu ? 'పదార్థాలు' : 'Ingredients'),
-              Tab(text: isTelugu ? 'తయారీ విధానం' : 'Instructions'),
+          child: Row(
+            children: [
+              _tabToggle(0, isTelugu ? 'పదార్థాలు' : 'Ingredients'),
+              _tabToggle(1, isTelugu ? 'తయారీ విధానం' : 'Instructions'),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        // Tab content — fixed height to avoid unbounded scroll
-        SizedBox(
-          height: _tabContentHeight(isTelugu),
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildIngredientsList(isTelugu, isTablet),
-              _buildInstructionsList(isTelugu, isTablet),
-            ],
-          ),
+        // Content — no height cap, outer CustomScrollView handles scrolling
+        IndexedStack(
+          index: _tabController.index,
+          children: [
+            _buildIngredientsList(isTelugu, isTablet),
+            _buildInstructionsList(isTelugu, isTablet),
+          ],
         ),
       ],
     );
   }
 
-  // Estimate height so the TabBarView has a bounded constraint
-  double _tabContentHeight(bool isTelugu) {
-    final ingredientCount = widget.recipe.ingredients.length;
-    final instructionCount = widget.recipe.instructions.length;
-    final maxCount =
-        ingredientCount > instructionCount ? ingredientCount : instructionCount;
-    // ~72px per row (48px image + padding), +44px for download bar, min 350, max 700
-    final ingredientHeight = widget.recipe.ingredients.length * 72.0 + 44.0;
-    final instructionHeight = widget.recipe.instructions.length * 72.0;
-    final maxHeight = ingredientHeight > instructionHeight
-        ? ingredientHeight
-        : instructionHeight;
-    return maxHeight.clamp(350.0, 700.0);
+  Widget _tabToggle(int index, String label) {
+    final isSelected = _tabController.index == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _tabController.index = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.orange.shade800 : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: isSelected ? Colors.white : Colors.grey.shade600,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Ingredients List ───────────────────────────────────────────────────────

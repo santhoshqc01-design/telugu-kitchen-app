@@ -11,7 +11,6 @@ import '../services/ingredient_download_service.dart';
 import '../services/step_timer_analyzer.dart';
 import '../services/adaptive_timer_service.dart';
 import '../repositories/timer_learning_repository.dart';
-import '../service_locator.dart';
 
 class CookingModeScreen extends StatefulWidget {
   final Recipe recipe;
@@ -98,11 +97,13 @@ class _CookingModeScreenState extends State<CookingModeScreen>
       duration: const Duration(milliseconds: 500),
     );
 
-    _stepSlideAnim = Tween<Offset>(
-      begin: const Offset(1, 0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-        parent: _stepSlideController, curve: Curves.easeOutCubic));
+    _stepSlideAnim = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _stepSlideController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     // WakelockPlus.enable();
     _loadStep(_currentStep);
@@ -136,8 +137,10 @@ class _CookingModeScreenState extends State<CookingModeScreen>
 
     _timerSource = _timerService.sourceFor(englishStep);
     _isPassive = _timerService.isPassiveStep(englishStep);
-    _predictedSeconds =
-        _timerService.predictSeconds(englishStep, stepIndex: index);
+    _predictedSeconds = _timerService.predictSeconds(
+      englishStep,
+      stepIndex: index,
+    );
     _totalTimeForStep = _predictedSeconds;
     _actualElapsedSeconds = 0;
     _userAddedTime = false; // FIX 3 — reset per step
@@ -239,10 +242,12 @@ class _CookingModeScreenState extends State<CookingModeScreen>
     _recordLearning(reason: StepEndReason.timerComplete);
 
     final isTelugu = context.read<LanguageBloc>().state.isTelugu;
-    context.read<VoiceBloc>().add(SpeakText(
-          isTelugu ? 'సమయం ముగిసింది' : 'Time is up',
-          language: isTelugu ? 'te-IN' : 'en-US',
-        ));
+    context.read<VoiceBloc>().add(
+      SpeakText(
+        isTelugu ? 'సమయం ముగిసింది' : 'Time is up',
+        language: isTelugu ? 'te-IN' : 'en-US',
+      ),
+    );
     _showTimerCompleteDialog(isTelugu);
   }
 
@@ -298,8 +303,9 @@ class _CookingModeScreenState extends State<CookingModeScreen>
   ///       → treat as ambiguous skip, don't update model.
   StepEndReason _reasonForManualNext() {
     if (_userAddedTime) return StepEndReason.userAddedTime;
-    final remainingFraction =
-        _predictedSeconds > 0 ? _secondsRemaining / _predictedSeconds : 0.0;
+    final remainingFraction = _predictedSeconds > 0
+        ? _secondsRemaining / _predictedSeconds
+        : 0.0;
     if (remainingFraction > 0.20) return StepEndReason.userSkippedEarly;
     return StepEndReason.timerComplete; // close enough to completion
   }
@@ -315,10 +321,9 @@ class _CookingModeScreenState extends State<CookingModeScreen>
     final isTelugu = context.read<LanguageBloc>().state.isTelugu;
     final steps = _instructions;
     if (_currentStep < steps.length) {
-      context.read<VoiceBloc>().add(SpeakText(
-            steps[_currentStep],
-            language: isTelugu ? 'te-IN' : 'en-US',
-          ));
+      context.read<VoiceBloc>().add(
+        SpeakText(steps[_currentStep], language: isTelugu ? 'te-IN' : 'en-US'),
+      );
     }
   }
 
@@ -331,11 +336,16 @@ class _CookingModeScreenState extends State<CookingModeScreen>
       _recordLearning(reason: _reasonForManualNext());
     }
 
-    _stepSlideAnim = Tween<Offset>(
-      begin: Offset(forward ? 1.0 : -1.0, 0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-        parent: _stepSlideController, curve: Curves.easeOutCubic));
+    _stepSlideAnim =
+        Tween<Offset>(
+          begin: Offset(forward ? 1.0 : -1.0, 0),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _stepSlideController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
     _stepSlideController.forward(from: 0);
 
     setState(() {
@@ -361,7 +371,8 @@ class _CookingModeScreenState extends State<CookingModeScreen>
 
   void _scrollToCurrentStep() {
     if (!_stepScrollController.hasClients || _instructions.length <= 5) return;
-    final target = _currentStep * _stepDotWidth -
+    final target =
+        _currentStep * _stepDotWidth -
         _stepScrollController.position.viewportDimension / 2 +
         _stepDotWidth / 2;
     _stepScrollController.animateTo(
@@ -380,16 +391,21 @@ class _CookingModeScreenState extends State<CookingModeScreen>
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Column(children: [
-          Icon(Icons.timer_off_rounded,
-              size: 60, color: Colors.orange.shade800),
-          const SizedBox(height: 12),
-          Text(
-            isTelugu ? '⏰ టైమర్ పూర్తయింది!' : '⏰ Timer Complete!',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20),
-          ),
-        ]),
+        title: Column(
+          children: [
+            Icon(
+              Icons.timer_off_rounded,
+              size: 60,
+              color: Colors.orange.shade800,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              isTelugu ? '⏰ టైమర్ పూర్తయింది!' : '⏰ Timer Complete!',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20),
+            ),
+          ],
+        ),
         content: Text(
           isTelugu
               ? 'ఈ అడుగు సమయం ముగిసింది.\nతదుపరి అడుగుకు వెళ్ళాలా?'
@@ -407,8 +423,9 @@ class _CookingModeScreenState extends State<CookingModeScreen>
               Navigator.pop(context);
               _goToNextStep();
             },
-            style:
-                FilledButton.styleFrom(backgroundColor: Colors.orange.shade800),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.orange.shade800,
+            ),
             child: Text(isTelugu ? 'తదుపరి అడుగు →' : 'Next Step →'),
           ),
         ],
@@ -421,21 +438,25 @@ class _CookingModeScreenState extends State<CookingModeScreen>
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(children: [
-          Icon(Icons.hourglass_top_rounded, color: Colors.blue.shade700),
-          const SizedBox(width: 10),
-          Text(isTelugu ? 'నిష్క్రియ దశ' : 'Passive Step',
-              style: const TextStyle(fontSize: 18)),
-        ]),
+        title: Row(
+          children: [
+            Icon(Icons.hourglass_top_rounded, color: Colors.blue.shade700),
+            const SizedBox(width: 10),
+            Text(
+              isTelugu ? 'నిష్క్రియ దశ' : 'Passive Step',
+              style: const TextStyle(fontSize: 18),
+            ),
+          ],
+        ),
         content: Text(
           isTelugu
               ? 'ఈ దశ నిరీక్షణ సమయం (మ్యారినేట్/నానపెట్టడం). '
-                  'టైమర్ మీరు మానవీయంగా ప్రారంభించాలి.\n\n'
-                  'సమయం పూర్తైనప్పుడు మీరు తిరిగి వస్తే, '
-                  '"తర్వాత" అని చెప్పండి.'
+                    'టైమర్ మీరు మానవీయంగా ప్రారంభించాలి.\n\n'
+                    'సమయం పూర్తైనప్పుడు మీరు తిరిగి వస్తే, '
+                    '"తర్వాత" అని చెప్పండి.'
               : 'This step is a waiting period (marinate/soak). '
-                  'Start the timer manually when ready.\n\n'
-                  'When the time is up, say "next" to continue.',
+                    'Start the timer manually when ready.\n\n'
+                    'When the time is up, say "next" to continue.',
           style: const TextStyle(height: 1.5),
         ),
         actionsAlignment: MainAxisAlignment.end,
@@ -445,8 +466,9 @@ class _CookingModeScreenState extends State<CookingModeScreen>
               Navigator.pop(context);
               _startTimer();
             },
-            style:
-                FilledButton.styleFrom(backgroundColor: Colors.blue.shade700),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.blue.shade700,
+            ),
             child: Text(isTelugu ? 'టైమర్ ప్రారంభించు' : 'Start Timer'),
           ),
         ],
@@ -457,24 +479,34 @@ class _CookingModeScreenState extends State<CookingModeScreen>
   void _showCompletionDialog() {
     if (!mounted) return;
     final isTelugu = context.read<LanguageBloc>().state.isTelugu;
-    context.read<VoiceBloc>().add(SpeakText(
-          isTelugu
-              ? 'అభినందనలు! వంట పూర్తయింది.'
-              : 'Congratulations! Cooking complete.',
-          language: isTelugu ? 'te-IN' : 'en-US',
-        ));
+    context.read<VoiceBloc>().add(
+      SpeakText(
+        isTelugu
+            ? 'అభినందనలు! వంట పూర్తయింది.'
+            : 'Congratulations! Cooking complete.',
+        language: isTelugu ? 'te-IN' : 'en-US',
+      ),
+    );
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Column(children: [
-          const Icon(Icons.celebration_rounded, size: 64, color: Colors.orange),
-          const SizedBox(height: 12),
-          Text(isTelugu ? '🎉 అభినందనలు!' : '🎉 Congratulations!',
+        title: Column(
+          children: [
+            const Icon(
+              Icons.celebration_rounded,
+              size: 64,
+              color: Colors.orange,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              isTelugu ? '🎉 అభినందనలు!' : '🎉 Congratulations!',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 22)),
-        ]),
+              style: const TextStyle(fontSize: 22),
+            ),
+          ],
+        ),
         content: Text(
           isTelugu
               ? 'మీరు ${widget.recipe.titleTe} విజయవంతంగా పూర్తి చేశారు!'
@@ -507,8 +539,9 @@ class _CookingModeScreenState extends State<CookingModeScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isTelugu = context.watch<LanguageBloc>().state.isTelugu;
-    final instructions =
-        isTelugu ? widget.recipe.instructionsTe : widget.recipe.instructions;
+    final instructions = isTelugu
+        ? widget.recipe.instructionsTe
+        : widget.recipe.instructions;
     final isTablet = MediaQuery.of(context).size.width > 600;
 
     return BlocListener<VoiceBloc, VoiceState>(
@@ -555,18 +588,27 @@ class _CookingModeScreenState extends State<CookingModeScreen>
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(
-                    isTablet ? 32 : 16, 16, isTablet ? 32 : 16, 16),
+                  isTablet ? 32 : 16,
+                  16,
+                  isTablet ? 32 : 16,
+                  16,
+                ),
                 child: Column(
                   children: [
                     _buildStepIndicator(
-                        instructions.length, isTelugu, isTablet),
+                      instructions.length,
+                      isTelugu,
+                      isTablet,
+                    ),
                     SizedBox(height: isTablet ? 24 : 16),
                     _buildSmartTimerCard(isTelugu, isTablet),
                     SizedBox(height: isTablet ? 24 : 16),
                     if (instructions.isNotEmpty &&
                         _currentStep < instructions.length)
                       _buildInstructionCard(
-                          instructions[_currentStep], isTablet),
+                        instructions[_currentStep],
+                        isTablet,
+                      ),
                     SizedBox(height: isTablet ? 24 : 16),
                     _buildVoiceControl(l10n, isTelugu, isTablet),
                     const SizedBox(height: 12),
@@ -584,32 +626,38 @@ class _CookingModeScreenState extends State<CookingModeScreen>
   // ── App Bar ────────────────────────────────────────────────────────────────
 
   AppBar _buildAppBar(bool isTelugu, int totalSteps) => AppBar(
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-            isTelugu ? widget.recipe.titleTe : widget.recipe.title,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    title: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          isTelugu ? widget.recipe.titleTe : widget.recipe.title,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        ),
+        Text(
+          isTelugu ? 'తయారీ విధానం' : 'Cooking Mode',
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.white.withValues(alpha: 0.75),
           ),
-          Text(
-            isTelugu ? 'తయారీ విధానం' : 'Cooking Mode',
-            style: TextStyle(
-                fontSize: 11, color: Colors.white.withValues(alpha: 0.75)),
-          ),
-        ]),
-        backgroundColor: Colors.orange.shade800,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list_alt_rounded),
-            tooltip: isTelugu ? 'పదార్థాలు' : 'Ingredients',
-            onPressed: () => _showIngredientsSheet(isTelugu),
-          ),
-        ],
-      );
+        ),
+      ],
+    ),
+    backgroundColor: Colors.orange.shade800,
+    foregroundColor: Colors.white,
+    elevation: 0,
+    actions: [
+      IconButton(
+        icon: const Icon(Icons.list_alt_rounded),
+        tooltip: isTelugu ? 'పదార్థాలు' : 'Ingredients',
+        onPressed: () => _showIngredientsSheet(isTelugu),
+      ),
+    ],
+  );
 
   void _showIngredientsSheet(bool isTelugu) {
-    final ingredients =
-        isTelugu ? widget.recipe.ingredientsTe : widget.recipe.ingredients;
+    final ingredients = isTelugu
+        ? widget.recipe.ingredientsTe
+        : widget.recipe.ingredients;
     showModalBottomSheet(
       context: context,
       builder: (_) => DraggableScrollableSheet(
@@ -625,40 +673,45 @@ class _CookingModeScreenState extends State<CookingModeScreen>
               // Header + download buttons
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 16, 0),
-                child: Row(children: [
-                  Expanded(
-                    child: Text(
-                      isTelugu ? 'పదార్థాలు' : 'Ingredients',
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w800),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        isTelugu ? 'పదార్థాలు' : 'Ingredients',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
-                  ),
-                  // Text share
-                  _SheetDownloadButton(
-                    icon: Icons.text_snippet_outlined,
-                    label: isTelugu ? 'టెక్స్ట్' : 'Text',
-                    onTap: () => IngredientDownloadService.instance.shareAsText(
-                      recipe: widget.recipe,
-                      ingredients: ingredients,
-                      isTelugu: isTelugu,
+                    // Text share
+                    _SheetDownloadButton(
+                      icon: Icons.text_snippet_outlined,
+                      label: isTelugu ? 'టెక్స్ట్' : 'Text',
+                      onTap: () =>
+                          IngredientDownloadService.instance.shareAsText(
+                            recipe: widget.recipe,
+                            ingredients: ingredients,
+                            isTelugu: isTelugu,
+                          ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  // Image share
-                  _SheetDownloadButton(
-                    icon: Icons.image_outlined,
-                    label: isTelugu ? 'చిత్రం' : 'Image',
-                    onTap: () =>
-                        IngredientDownloadService.instance.shareAsImage(
-                      boundaryKey: boundaryKey,
-                      recipeTitle: isTelugu
-                          ? widget.recipe.titleTe
-                          : widget.recipe.title,
-                      isTelugu: isTelugu,
+                    const SizedBox(width: 6),
+                    // Image share
+                    _SheetDownloadButton(
+                      icon: Icons.image_outlined,
+                      label: isTelugu ? 'చిత్రం' : 'Image',
+                      onTap: () =>
+                          IngredientDownloadService.instance.shareAsImage(
+                            boundaryKey: boundaryKey,
+                            recipeTitle: isTelugu
+                                ? widget.recipe.titleTe
+                                : widget.recipe.title,
+                            isTelugu: isTelugu,
+                          ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                ]),
+                    const SizedBox(width: 4),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               // List
@@ -694,16 +747,16 @@ class _CookingModeScreenState extends State<CookingModeScreen>
   // ── Progress bar ───────────────────────────────────────────────────────────
 
   Widget _buildTopProgressBar(int totalSteps) => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: (_currentStep + 1) / totalSteps),
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOut,
-        builder: (_, v, __) => LinearProgressIndicator(
-          value: v,
-          backgroundColor: Colors.grey.shade200,
-          valueColor: AlwaysStoppedAnimation(Colors.orange.shade800),
-          minHeight: 5,
-        ),
-      );
+    tween: Tween(begin: 0, end: (_currentStep + 1) / totalSteps),
+    duration: const Duration(milliseconds: 400),
+    curve: Curves.easeOut,
+    builder: (_, v, __) => LinearProgressIndicator(
+      value: v,
+      backgroundColor: Colors.grey.shade200,
+      valueColor: AlwaysStoppedAnimation(Colors.orange.shade800),
+      minHeight: 5,
+    ),
+  );
 
   // ── Step indicator ─────────────────────────────────────────────────────────
 
@@ -711,85 +764,97 @@ class _CookingModeScreenState extends State<CookingModeScreen>
     final needsScroll = totalSteps > 7;
     final dots = Row(
       mainAxisSize: needsScroll ? MainAxisSize.min : MainAxisSize.max,
-      mainAxisAlignment:
-          needsScroll ? MainAxisAlignment.start : MainAxisAlignment.center,
+      mainAxisAlignment: needsScroll
+          ? MainAxisAlignment.start
+          : MainAxisAlignment.center,
       children: List.generate(totalSteps, (i) {
         final isActive = i == _currentStep;
         final isDone = i < _currentStep;
-        return Row(children: [
-          if (i > 0)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: isTablet ? 20 : 14,
-              height: 2,
-              color: isDone ? Colors.green : Colors.grey.shade300,
-            ),
-          GestureDetector(
-            onTap: () {
-              if (i <= _currentStep) _goToStep(i, forward: i > _currentStep);
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: isTablet ? 40 : 32,
-              height: isTablet ? 40 : 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isActive
-                    ? Colors.orange.shade800
-                    : isDone
-                        ? Colors.green
-                        : Colors.grey.shade300,
-                border: isActive
-                    ? Border.all(color: Colors.orange.shade200, width: 3)
-                    : null,
-                boxShadow: isActive
-                    ? [
-                        BoxShadow(
-                          color: Colors.orange.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          spreadRadius: 2,
+        return Row(
+          children: [
+            if (i > 0)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: isTablet ? 20 : 14,
+                height: 2,
+                color: isDone ? Colors.green : Colors.grey.shade300,
+              ),
+            GestureDetector(
+              onTap: () {
+                if (i <= _currentStep) _goToStep(i, forward: i > _currentStep);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: isTablet ? 40 : 32,
+                height: isTablet ? 40 : 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isActive
+                      ? Colors.orange.shade800
+                      : isDone
+                      ? Colors.green
+                      : Colors.grey.shade300,
+                  border: isActive
+                      ? Border.all(color: Colors.orange.shade200, width: 3)
+                      : null,
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: Colors.orange.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: isDone && !isActive
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: 14,
                         )
-                      ]
-                    : null,
-              ),
-              child: Center(
-                child: isDone && !isActive
-                    ? const Icon(Icons.check_rounded,
-                        color: Colors.white, size: 14)
-                    : Text('${i + 1}',
-                        style: TextStyle(
-                          color: (isActive || isDone)
-                              ? Colors.white
-                              : Colors.grey.shade600,
-                          fontWeight: FontWeight.bold,
-                          fontSize: isTablet ? 14 : 11,
-                        )),
+                      : Text(
+                          '${i + 1}',
+                          style: TextStyle(
+                            color: (isActive || isDone)
+                                ? Colors.white
+                                : Colors.grey.shade600,
+                            fontWeight: FontWeight.bold,
+                            fontSize: isTablet ? 14 : 11,
+                          ),
+                        ),
+                ),
               ),
             ),
-          ),
-        ]);
+          ],
+        );
       }),
     );
 
-    return Column(children: [
-      if (needsScroll)
-        SingleChildScrollView(
-          controller: _stepScrollController,
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: dots,
-        )
-      else
-        dots,
-      const SizedBox(height: 8),
-      Text(
-        isTelugu
-            ? 'అడుగు ${_currentStep + 1} / $totalSteps'
-            : 'Step ${_currentStep + 1} of $totalSteps',
-        style: TextStyle(
-            color: Colors.grey.shade600, fontSize: isTablet ? 14 : 12),
-      ),
-    ]);
+    return Column(
+      children: [
+        if (needsScroll)
+          SingleChildScrollView(
+            controller: _stepScrollController,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: dots,
+          )
+        else
+          dots,
+        const SizedBox(height: 8),
+        Text(
+          isTelugu
+              ? 'అడుగు ${_currentStep + 1} / $totalSteps'
+              : 'Step ${_currentStep + 1} of $totalSteps',
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: isTablet ? 14 : 12,
+          ),
+        ),
+      ],
+    );
   }
 
   // ── Smart Timer Card ───────────────────────────────────────────────────────
@@ -817,104 +882,117 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                 )
               : null,
         ),
-        child: Column(children: [
-          // ── Source badge ─────────────────────────────────────────────────
-          _buildSourceBadge(isTelugu),
-          const SizedBox(height: 14),
-
-          // ── Ring + time display ──────────────────────────────────────────
-          _buildTimerRing(isComplete, isWarning, isTablet, isTelugu),
-          const SizedBox(height: 14),
-
-          // ── Passive step banner ──────────────────────────────────────────
-          if (_isPassive) _buildPassiveBanner(isTelugu),
-          if (!_isPassive) ...[
-            // ── Status pill ────────────────────────────────────────────────
-            _buildStatusPill(isComplete, isTelugu),
-            const SizedBox(height: 18),
-
-            // ── Controls ───────────────────────────────────────────────────
-            _buildTimerControls(isTelugu),
-            const SizedBox(height: 12),
-
-            // ── +time chips ────────────────────────────────────────────────
-            _buildAddTimeChips(isTelugu),
-          ],
-
-          if (_isPassive) ...[
+        child: Column(
+          children: [
+            // ── Source badge ─────────────────────────────────────────────────
+            _buildSourceBadge(isTelugu),
             const SizedBox(height: 14),
-            _buildPassiveControls(isTelugu),
+
+            // ── Ring + time display ──────────────────────────────────────────
+            _buildTimerRing(isComplete, isWarning, isTablet, isTelugu),
+            const SizedBox(height: 14),
+
+            // ── Passive step banner ──────────────────────────────────────────
+            if (_isPassive) _buildPassiveBanner(isTelugu),
+            if (!_isPassive) ...[
+              // ── Status pill ────────────────────────────────────────────────
+              _buildStatusPill(isComplete, isTelugu),
+              const SizedBox(height: 18),
+
+              // ── Controls ───────────────────────────────────────────────────
+              _buildTimerControls(isTelugu),
+              const SizedBox(height: 12),
+
+              // ── +time chips ────────────────────────────────────────────────
+              _buildAddTimeChips(isTelugu),
+            ],
+
+            if (_isPassive) ...[
+              const SizedBox(height: 14),
+              _buildPassiveControls(isTelugu),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }
 
   Widget _buildTimerRing(
-      bool isComplete, bool isWarning, bool isTablet, bool isTelugu) {
+    bool isComplete,
+    bool isWarning,
+    bool isTablet,
+    bool isTelugu,
+  ) {
     final size = isTablet ? 170.0 : 145.0;
     final strokeW = isTablet ? 12.0 : 10.0;
 
     return SizedBox(
       width: size,
       height: size,
-      child: Stack(fit: StackFit.expand, children: [
-        // Animated ring — driven by _ringController (smooth, not jumpy)
-        AnimatedBuilder(
-          animation: _ringController,
-          builder: (_, __) {
-            final value = _ringController.value;
-            final ringColor = isComplete
-                ? Colors.green
-                : isWarning
-                    ? Colors.red
-                    : Colors.orange.shade800;
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Animated ring — driven by _ringController (smooth, not jumpy)
+          AnimatedBuilder(
+            animation: _ringController,
+            builder: (_, __) {
+              final value = _ringController.value;
+              final ringColor = isComplete
+                  ? Colors.green
+                  : isWarning
+                  ? Colors.red
+                  : Colors.orange.shade800;
 
-            return AnimatedBuilder(
-              animation: _warningController,
-              builder: (_, __) {
-                // Flash the ring when in warning zone
-                final flashOpacity =
-                    isWarning ? 0.6 + _warningController.value * 0.4 : 1.0;
-                return CircularProgressIndicator(
-                  value: value,
-                  strokeWidth: strokeW,
-                  backgroundColor: Colors.grey.shade200,
-                  valueColor: AlwaysStoppedAnimation(
-                    ringColor.withValues(alpha: flashOpacity),
-                  ),
-                );
-              },
-            );
-          },
-        ),
+              return AnimatedBuilder(
+                animation: _warningController,
+                builder: (_, __) {
+                  // Flash the ring when in warning zone
+                  final flashOpacity = isWarning
+                      ? 0.6 + _warningController.value * 0.4
+                      : 1.0;
+                  return CircularProgressIndicator(
+                    value: value,
+                    strokeWidth: strokeW,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor: AlwaysStoppedAnimation(
+                      ringColor.withValues(alpha: flashOpacity),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
 
-        // Time text in center
-        Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(
-              _formatTime(_secondsRemaining),
-              style: TextStyle(
-                fontSize: isTablet ? 38 : 30,
-                fontWeight: FontWeight.bold,
-                color: isComplete
-                    ? Colors.green
-                    : isWarning
+          // Time text in center
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _formatTime(_secondsRemaining),
+                  style: TextStyle(
+                    fontSize: isTablet ? 38 : 30,
+                    fontWeight: FontWeight.bold,
+                    color: isComplete
+                        ? Colors.green
+                        : isWarning
                         ? Colors.red
                         : Colors.orange.shade800,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                if (!_isTimerRunning && !isComplete && _totalTimeForStep > 0)
+                  Text(
+                    isTelugu
+                        ? '${_pad(_totalTimeForStep ~/ 60)} నిమి'
+                        : '${_pad(_totalTimeForStep ~/ 60)} min total',
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                  ),
+              ],
             ),
-            if (!_isTimerRunning && !isComplete && _totalTimeForStep > 0)
-              Text(
-                isTelugu
-                    ? '${_pad(_totalTimeForStep ~/ 60)} నిమి'
-                    : '${_pad(_totalTimeForStep ~/ 60)} min total',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-              ),
-          ]),
-        ),
-      ]),
+          ),
+        ],
+      ),
     );
   }
 
@@ -927,15 +1005,21 @@ class _CookingModeScreenState extends State<CookingModeScreen>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(_timerSource.icon, size: 13, color: color),
-        const SizedBox(width: 5),
-        Text(
-          _timerSource.label(isTelugu),
-          style: TextStyle(
-              fontSize: 11, color: color, fontWeight: FontWeight.w600),
-        ),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_timerSource.icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            _timerSource.label(isTelugu),
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -944,124 +1028,156 @@ class _CookingModeScreenState extends State<CookingModeScreen>
         ? (
             isTelugu ? '⏱️ టైమర్ పనిచేస్తోంది' : '⏱️ Timer Running',
             Colors.green.shade100,
-            Colors.green.shade800
+            Colors.green.shade800,
           )
         : isComplete
-            ? (
-                isTelugu ? '✅ పూర్తయింది' : '✅ Complete',
-                Colors.blue.shade100,
-                Colors.blue.shade800
-              )
-            : (
-                isTelugu ? '⏸️ సిద్ధంగా ఉంది' : '⏸️ Ready',
-                Colors.grey.shade200,
-                Colors.grey.shade700
-              );
+        ? (
+            isTelugu ? '✅ పూర్తయింది' : '✅ Complete',
+            Colors.blue.shade100,
+            Colors.blue.shade800,
+          )
+        : (
+            isTelugu ? '⏸️ సిద్ధంగా ఉంది' : '⏸️ Ready',
+            Colors.grey.shade200,
+            Colors.grey.shade700,
+          );
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-          color: bgColor, borderRadius: BorderRadius.circular(20)),
-      child: Text(text,
-          style: TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600, color: fgColor)),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: fgColor,
+        ),
+      ),
     );
   }
 
   Widget _buildTimerControls(bool isTelugu) => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ElevatedButton.icon(
-            onPressed: _isTimerRunning ? _pauseTimer : _startTimer,
-            icon: Icon(_isTimerRunning
-                ? Icons.pause_rounded
-                : Icons.play_arrow_rounded),
-            label: Text(_isTimerRunning
-                ? (isTelugu ? 'పాజ్' : 'Pause')
-                : (isTelugu ? 'ప్రారంభించు' : 'Start')),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _isTimerRunning ? Colors.orange : Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      ElevatedButton.icon(
+        onPressed: _isTimerRunning ? _pauseTimer : _startTimer,
+        icon: Icon(
+          _isTimerRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+        ),
+        label: Text(
+          _isTimerRunning
+              ? (isTelugu ? 'పాజ్' : 'Pause')
+              : (isTelugu ? 'ప్రారంభించు' : 'Start'),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _isTimerRunning ? Colors.orange : Colors.green,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(width: 12),
-          ElevatedButton.icon(
-            onPressed: _resetTimer,
-            icon: const Icon(Icons.refresh_rounded),
-            label: Text(isTelugu ? 'రీసెట్' : 'Reset'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
+        ),
+      ),
+      const SizedBox(width: 12),
+      ElevatedButton.icon(
+        onPressed: _resetTimer,
+        icon: const Icon(Icons.refresh_rounded),
+        label: Text(isTelugu ? 'రీసెట్' : 'Reset'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.grey.shade600,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
-      );
+        ),
+      ),
+    ],
+  );
 
   Widget _buildAddTimeChips(bool isTelugu) => Wrap(
-        spacing: 8,
-        runSpacing: 6,
-        alignment: WrapAlignment.center,
-        children: [1, 5, 10]
-            .map((mins) => ActionChip(
-                  onPressed: () => _addTime(mins),
-                  backgroundColor: Colors.orange.shade50,
-                  side: BorderSide(color: Colors.orange.shade200),
-                  avatar: Icon(Icons.add_rounded,
-                      size: 15, color: Colors.orange.shade800),
-                  label: Text('+$mins ${isTelugu ? 'నిమి' : 'min'}',
-                      style: TextStyle(
-                          color: Colors.orange.shade800,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600)),
-                ))
-            .toList(),
-      );
+    spacing: 8,
+    runSpacing: 6,
+    alignment: WrapAlignment.center,
+    children: [1, 5, 10]
+        .map(
+          (mins) => ActionChip(
+            onPressed: () => _addTime(mins),
+            backgroundColor: Colors.orange.shade50,
+            side: BorderSide(color: Colors.orange.shade200),
+            avatar: Icon(
+              Icons.add_rounded,
+              size: 15,
+              color: Colors.orange.shade800,
+            ),
+            label: Text(
+              '+$mins ${isTelugu ? 'నిమి' : 'min'}',
+              style: TextStyle(
+                color: Colors.orange.shade800,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        )
+        .toList(),
+  );
 
   /// Banner shown for passive steps (marinate/soak) with a contextual message
   Widget _buildPassiveBanner(bool isTelugu) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blue.shade200),
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    decoration: BoxDecoration(
+      color: Colors.blue.shade50,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.blue.shade200),
+    ),
+    child: Row(
+      children: [
+        Icon(
+          Icons.hourglass_top_rounded,
+          color: Colors.blue.shade700,
+          size: 20,
         ),
-        child: Row(children: [
-          Icon(Icons.hourglass_top_rounded,
-              color: Colors.blue.shade700, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              isTelugu
-                  ? 'ఇది నిరీక్షణ దశ — మీకు తయారుగా ఉన్నప్పుడు టైమర్ ప్రారంభించండి'
-                  : 'Waiting step — start the timer when you\'re ready',
-              style: TextStyle(
-                  color: Colors.blue.shade800, fontSize: 12, height: 1.4),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            isTelugu
+                ? 'ఇది నిరీక్షణ దశ — మీకు తయారుగా ఉన్నప్పుడు టైమర్ ప్రారంభించండి'
+                : 'Waiting step — start the timer when you\'re ready',
+            style: TextStyle(
+              color: Colors.blue.shade800,
+              fontSize: 12,
+              height: 1.4,
             ),
           ),
-          const SizedBox(width: 6),
-          IconButton(
-            icon: Icon(Icons.info_outline_rounded,
-                color: Colors.blue.shade600, size: 18),
-            onPressed: () => _showPassiveStepInfo(isTelugu),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
+        ),
+        const SizedBox(width: 6),
+        IconButton(
+          icon: Icon(
+            Icons.info_outline_rounded,
+            color: Colors.blue.shade600,
+            size: 18,
           ),
-        ]),
-      );
+          onPressed: () => _showPassiveStepInfo(isTelugu),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+      ],
+    ),
+  );
 
-  Widget _buildPassiveControls(bool isTelugu) => Column(children: [
-        _buildTimerControls(isTelugu),
-        const SizedBox(height: 8),
-        _buildAddTimeChips(isTelugu),
-      ]);
+  Widget _buildPassiveControls(bool isTelugu) => Column(
+    children: [
+      _buildTimerControls(isTelugu),
+      const SizedBox(height: 8),
+      _buildAddTimeChips(isTelugu),
+    ],
+  );
 
   // ── Instruction card ───────────────────────────────────────────────────────
 
@@ -1070,8 +1186,9 @@ class _CookingModeScreenState extends State<CookingModeScreen>
         position: _stepSlideAnim,
         child: Card(
           elevation: 2,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Container(
             width: double.infinity,
             padding: EdgeInsets.all(isTablet ? 32 : 22),
@@ -1083,26 +1200,33 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                 end: Alignment.bottomRight,
               ),
             ),
-            child: Column(children: [
-              Icon(Icons.format_quote_rounded,
-                  size: 20, color: Colors.orange.shade300),
-              const SizedBox(height: 14),
-              Text(
-                instruction,
-                style: TextStyle(
-                  fontSize: isTablet ? 22 : 19,
-                  height: 1.7,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade900,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 14),
-              Icon(Icons.format_quote_rounded,
+            child: Column(
+              children: [
+                Icon(
+                  Icons.format_quote_rounded,
                   size: 20,
                   color: Colors.orange.shade300,
-                  textDirection: TextDirection.rtl),
-            ]),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  instruction,
+                  style: TextStyle(
+                    fontSize: isTablet ? 22 : 19,
+                    height: 1.7,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade900,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 14),
+                Icon(
+                  Icons.format_quote_rounded,
+                  size: 20,
+                  color: Colors.orange.shade300,
+                  textDirection: TextDirection.rtl,
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -1110,7 +1234,10 @@ class _CookingModeScreenState extends State<CookingModeScreen>
   // ── Voice control ──────────────────────────────────────────────────────────
 
   Widget _buildVoiceControl(
-      AppLocalizations l10n, bool isTelugu, bool isTablet) {
+    AppLocalizations l10n,
+    bool isTelugu,
+    bool isTablet,
+  ) {
     return BlocConsumer<VoiceBloc, VoiceState>(
       listener: (context, state) {
         if (state is VoiceListening) {
@@ -1122,51 +1249,54 @@ class _CookingModeScreenState extends State<CookingModeScreen>
       },
       builder: (context, state) {
         final isListening = state is VoiceListening;
-        return Column(children: [
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (_, child) => Transform.scale(
-              scale: isListening ? 1.0 + _pulseController.value * 0.12 : 1.0,
-              child: child,
-            ),
-            child: FloatingActionButton.large(
-              heroTag: 'cooking-mic',
-              onPressed: () {
-                if (isListening) {
-                  context.read<VoiceBloc>().add(const StopListening());
-                } else {
-                  context.read<VoiceBloc>().add(StartListening(
-                        localeId: isTelugu ? 'te_IN' : 'en_US',
-                      ));
-                }
-              },
-              backgroundColor:
-                  isListening ? Colors.red : Colors.orange.shade800,
-              child: Icon(
-                isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                size: isTablet ? 40 : 34,
+        return Column(
+          children: [
+            AnimatedBuilder(
+              animation: _pulseController,
+              builder: (_, child) => Transform.scale(
+                scale: isListening ? 1.0 + _pulseController.value * 0.12 : 1.0,
+                child: child,
+              ),
+              child: FloatingActionButton.large(
+                heroTag: 'cooking-mic',
+                onPressed: () {
+                  if (isListening) {
+                    context.read<VoiceBloc>().add(const StopListening());
+                  } else {
+                    context.read<VoiceBloc>().add(
+                      StartListening(localeId: isTelugu ? 'te_IN' : 'en_US'),
+                    );
+                  }
+                },
+                backgroundColor: isListening
+                    ? Colors.red
+                    : Colors.orange.shade800,
+                child: Icon(
+                  isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                  size: isTablet ? 40 : 34,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            isListening ? l10n.listening : l10n.voiceCommands,
-            style: TextStyle(
-              color: isListening ? Colors.red : Colors.grey.shade600,
-              fontSize: 14,
-              fontWeight: isListening ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          if (!isListening) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
             Text(
-              isTelugu
-                  ? '"తర్వాత", "వెనక్కి", "మళ్ళీ", "టైమర్"'
-                  : '"next", "back", "repeat", "timer"',
-              style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+              isListening ? l10n.listening : l10n.voiceCommands,
+              style: TextStyle(
+                color: isListening ? Colors.red : Colors.grey.shade600,
+                fontSize: 14,
+                fontWeight: isListening ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
+            if (!isListening) ...[
+              const SizedBox(height: 6),
+              Text(
+                isTelugu
+                    ? '"తర్వాత", "వెనక్కి", "మళ్ళీ", "టైమర్"'
+                    : '"next", "back", "repeat", "timer"',
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+              ),
+            ],
           ],
-        ]);
+        );
       },
     );
   }
@@ -1174,12 +1304,20 @@ class _CookingModeScreenState extends State<CookingModeScreen>
   // ── Navigation bar ─────────────────────────────────────────────────────────
 
   Widget _buildNavigationBar(
-      AppLocalizations l10n, int totalSteps, bool isTelugu, bool isTablet) {
+    AppLocalizations l10n,
+    int totalSteps,
+    bool isTelugu,
+    bool isTablet,
+  ) {
     final isLast = _currentStep == totalSteps - 1;
     return SafeArea(
       child: Container(
-        padding:
-            EdgeInsets.fromLTRB(isTablet ? 24 : 16, 12, isTablet ? 24 : 16, 12),
+        padding: EdgeInsets.fromLTRB(
+          isTablet ? 24 : 16,
+          12,
+          isTablet ? 24 : 16,
+          12,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
@@ -1187,49 +1325,57 @@ class _CookingModeScreenState extends State<CookingModeScreen>
               color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 10,
               offset: const Offset(0, -4),
-            )
+            ),
           ],
         ),
-        child: Row(children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _currentStep > 0 ? _goToPreviousStep : null,
-              icon: const Icon(Icons.arrow_back_rounded),
-              label: Text(l10n.previousStep),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade200,
-                foregroundColor: Colors.black87,
-                disabledBackgroundColor: Colors.grey.shade100,
-                disabledForegroundColor: Colors.grey.shade400,
-                padding: EdgeInsets.symmetric(vertical: isTablet ? 18 : 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _currentStep > 0 ? _goToPreviousStep : null,
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: Text(l10n.previousStep),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade200,
+                  foregroundColor: Colors.black87,
+                  disabledBackgroundColor: Colors.grey.shade100,
+                  disabledForegroundColor: Colors.grey.shade400,
+                  padding: EdgeInsets.symmetric(vertical: isTablet ? 18 : 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ),
-          ),
-          SizedBox(width: isTablet ? 20 : 12),
-          Expanded(
-            flex: 2,
-            child: FilledButton.icon(
-              onPressed: isLast ? _showCompletionDialog : _goToNextStep,
-              icon: Icon(isLast
-                  ? Icons.check_circle_rounded
-                  : Icons.arrow_forward_rounded),
-              label: Text(
-                isLast
-                    ? (isTelugu ? 'పూర్తయింది! 🎉' : 'Finish! 🎉')
-                    : l10n.nextStep,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              style: FilledButton.styleFrom(
-                backgroundColor: isLast ? Colors.green : Colors.orange.shade800,
-                padding: EdgeInsets.symmetric(vertical: isTablet ? 18 : 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+            SizedBox(width: isTablet ? 20 : 12),
+            Expanded(
+              flex: 2,
+              child: FilledButton.icon(
+                onPressed: isLast ? _showCompletionDialog : _goToNextStep,
+                icon: Icon(
+                  isLast
+                      ? Icons.check_circle_rounded
+                      : Icons.arrow_forward_rounded,
+                ),
+                label: Text(
+                  isLast
+                      ? (isTelugu ? 'పూర్తయింది! 🎉' : 'Finish! 🎉')
+                      : l10n.nextStep,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: isLast
+                      ? Colors.green
+                      : Colors.orange.shade800,
+                  padding: EdgeInsets.symmetric(vertical: isTablet ? 18 : 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -1240,29 +1386,38 @@ class _SheetDownloadButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _SheetDownloadButton(
-      {required this.icon, required this.label, required this.onTap});
+  const _SheetDownloadButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: Colors.orange.shade50,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.orange.shade200),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.orange.shade800),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.orange.shade800,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 14, color: Colors.orange.shade800),
-            const SizedBox(width: 4),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.orange.shade800,
-                    fontWeight: FontWeight.w600)),
-          ]),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }

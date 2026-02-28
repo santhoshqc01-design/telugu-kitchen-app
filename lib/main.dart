@@ -5,18 +5,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'blocs/recipe/recipe_bloc.dart';
 import 'blocs/voice/voice_bloc.dart';
 import 'blocs/language/language_bloc.dart';
 import 'repositories/favorites_repository.dart';
+import 'repositories/timer_learning_repository.dart';
+import 'service_locator.dart';
 import 'screens/splash_screen.dart';
 import 'services/tts_service.dart';
 import 'services/speech_service.dart';
 import 'l10n/app_localizations.dart';
-import 'repositories/timer_learning_repository.dart';
-import 'service_locator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,12 +24,6 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
-  final prefs = await SharedPreferences.getInstance();
-
-  ServiceLocator.instance.init(
-    learningRepo: TimerLearningRepository(prefs),
-  );
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -44,16 +37,28 @@ void main() async {
   // Initialize SharedPreferences once at startup and inject into the bloc.
   // This avoids async calls inside the bloc itself.
   final favoritesRepo = await FavoritesRepository.create();
+  final learningRepo = await TimerLearningRepository.create();
 
-  runApp(RuchiApp(favoritesRepository: favoritesRepo));
+  // Make repos accessible to screens that don't go through BLoC
+  ServiceLocator.instance.init(learningRepo: learningRepo);
+
+  runApp(RuchiApp(
+    favoritesRepository: favoritesRepo,
+    learningRepository: learningRepo,
+  ));
 }
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 class RuchiApp extends StatelessWidget {
   final FavoritesRepository favoritesRepository;
+  final TimerLearningRepository learningRepository;
 
-  const RuchiApp({super.key, required this.favoritesRepository});
+  const RuchiApp({
+    super.key,
+    required this.favoritesRepository,
+    required this.learningRepository,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -430,14 +435,22 @@ class _ConnectivityBannerState extends State<_ConnectivityBanner>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
 
+    // Set initial state synchronously so the listener never fires before
+    // we know the baseline — avoids false "Back online" on launch.
     _connectivity.checkConnectivity().then((results) {
-      _isOnline = _isConnected(results);
-      _initialCheckDone = true;
+      if (!mounted) return;
+      final online = _isConnected(results);
+      setState(() {
+        _isOnline = online;
+        _initialCheckDone = true;
+      });
     });
 
     _subscription = _connectivity.onConnectivityChanged.listen((results) {
       if (!_initialCheckDone) return;
-      _onConnectivityChanged(_isConnected(results));
+      final nowOnline = _isConnected(results);
+      // Only show banner if status genuinely changed
+      if (nowOnline != _isOnline) _onConnectivityChanged(nowOnline);
     });
   }
 
@@ -459,7 +472,8 @@ class _ConnectivityBannerState extends State<_ConnectivityBanner>
       _showBanner = true;
     });
     _animController.forward(from: 0);
-    if (isOnline && !wasOnline) {
+    // Auto-dismiss "back online" after 3s; offline banner stays until reconnected
+    if (isOnline) {
       Future.delayed(const Duration(seconds: 3), _dismissBanner);
     }
   }

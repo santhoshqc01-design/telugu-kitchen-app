@@ -22,20 +22,27 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   Timer? _debounce;
+  bool _showSuggestions = false;
 
   @override
   void initState() {
     super.initState();
     context.read<VoiceBloc>().add(const InitializeVoice());
     context.read<RecipeBloc>().add(const LoadRecipes());
-    // Rebuild when search text changes so clear button shows/hides
+    // Rebuild when search text changes (clear button + suggestions)
     _searchController.addListener(() => setState(() {}));
+    // Show suggestions when search field is focused
+    _searchFocusNode.addListener(() {
+      setState(() => _showSuggestions = _searchFocusNode.hasFocus);
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -50,6 +57,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _clearSearch() {
     _searchController.clear();
+    _searchFocusNode.unfocus();
+    setState(() => _showSuggestions = false);
     context.read<RecipeBloc>().add(const SearchRecipes(''));
   }
 
@@ -65,18 +74,14 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _selectedIndex,
         children: [
           _buildHomeTab(l10n, isTelugu),
-          const FavoritesScreen(),
+          FavoritesScreen(
+            onBrowse: () => setState(() => _selectedIndex = 0),
+          ),
           const SettingsScreen(),
         ],
       ),
       bottomNavigationBar: _buildNavBar(l10n),
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton(
-              onPressed: () => _showVoiceSearch(context),
-              backgroundColor: Colors.orange.shade800,
-              child: const Icon(Icons.mic_rounded, color: Colors.white),
-            )
-          : null,
+      // FAB removed — voice mic is now inside the search bar
     );
   }
 
@@ -159,48 +164,189 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Sliver App Bar ─────────────────────────────────────────────────────────
 
+  // Returns time-based greeting and emoji
+  (String, String) _getGreeting(bool isTelugu) {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return isTelugu ? ('శుభోదయం', '🌅') : ('Good Morning', '🌅');
+    } else if (hour < 17) {
+      return isTelugu ? ('శుభ మధ్యాహ్నం', '☀️') : ('Good Afternoon', '☀️');
+    } else if (hour < 20) {
+      return isTelugu ? ('శుభ సాయంత్రం', '🌇') : ('Good Evening', '🌇');
+    } else {
+      return isTelugu ? ('శుభ రాత్రి', '🌙') : ('Good Night', '🌙');
+    }
+  }
+
   Widget _buildSliverAppBar(bool isTelugu) {
+    final (greeting, emoji) = _getGreeting(isTelugu);
+
     return SliverAppBar(
-      expandedHeight: 200,
-      floating: true,
+      expandedHeight: 240,
+      floating: false,
       pinned: true,
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          isTelugu ? 'రుచి' : 'Ruchi',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            shadows: [
-              Shadow(blurRadius: 4, color: Colors.black45, offset: Offset(0, 2))
-            ],
-          ),
+      stretch: true,
+      backgroundColor: Colors.orange.shade800,
+      // title: only appears in the collapsed app bar (when scrolled up).
+      // Do NOT put a title inside FlexibleSpaceBar — Flutter renders it
+      // over the background in expanded state too, causing double text.
+      title: Text(
+        isTelugu ? 'రుచి' : 'Ruchi',
+        style: const TextStyle(
+          fontWeight: FontWeight.w900,
+          fontSize: 20,
+          letterSpacing: 0.5,
+          color: Colors.white,
+          shadows: [
+            Shadow(blurRadius: 4, color: Colors.black38, offset: Offset(0, 2))
+          ],
         ),
+      ),
+      // Hide the SliverAppBar title while expanded — it only shows when pinned/collapsed
+      titleSpacing: 0,
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.pin,
+        // Full expanded background
         background: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.orange.shade800, Colors.orange.shade600],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFFBF360C), // deep burnt orange
+                Colors.orange.shade700,
+                const Color(0xFFFF8F00), // amber
+              ],
+              stops: const [0.0, 0.55, 1.0],
             ),
           ),
           child: Stack(
             children: [
+              // ── Decorative circles ────────────────────────────────────
               Positioned(
-                top: -30,
-                right: -30,
+                top: -40,
+                right: -40,
                 child: Container(
-                  width: 130,
-                  height: 130,
+                  width: 160,
+                  height: 160,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.08),
+                    color: Colors.white.withValues(alpha: 0.06),
                   ),
                 ),
               ),
-              Center(
-                child: Icon(
-                  Icons.restaurant_menu_rounded,
-                  size: 80,
-                  color: Colors.white.withValues(alpha: 0.2),
+              Positioned(
+                bottom: -20,
+                left: -30,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black.withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 60,
+                right: 20,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.05),
+                  ),
+                ),
+              ),
+              // ── Content ───────────────────────────────────────────────
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Greeting row ──────────────────────────────────
+                      Row(
+                        children: [
+                          Text(
+                            '$emoji  $greeting',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // ── App name ──────────────────────────────────────
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'రుచి',
+                            style: TextStyle(
+                              fontSize: 46,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              height: 1.0,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              'Ruchi',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.white.withValues(alpha: 0.7),
+                                letterSpacing: 2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      // ── Stats row ─────────────────────────────────────
+                      BlocBuilder<RecipeBloc, RecipeState>(
+                        builder: (context, state) {
+                          if (state is! RecipeLoaded)
+                            return const SizedBox.shrink();
+                          final total = state.allRecipes.length;
+                          final vegCount = state.allRecipes
+                              .where((r) => r.isVegetarian)
+                              .length;
+                          final favCount = state.favoriteCount;
+                          return Row(
+                            children: [
+                              _headerStat(
+                                isTelugu ? '$total వంటకాలు' : '$total Recipes',
+                                Icons.menu_book_rounded,
+                              ),
+                              _headerDot(),
+                              _headerStat(
+                                isTelugu ? '$vegCount శాక' : '$vegCount Veg',
+                                Icons.eco_rounded,
+                              ),
+                              if (favCount > 0) ...[
+                                _headerDot(),
+                                _headerStat(
+                                  isTelugu
+                                      ? '$favCount ఇష్టమైన'
+                                      : '$favCount Saved',
+                                  Icons.favorite_rounded,
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -241,28 +387,253 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _headerStat(String label, IconData icon) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: Colors.white.withValues(alpha: 0.8)),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.85),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _headerDot() => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Container(
+          width: 3,
+          height: 3,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.4),
+          ),
+        ),
+      );
+
   // ── Search Bar ─────────────────────────────────────────────────────────────
 
   Widget _buildSearchBar(AppLocalizations l10n) {
-    return TextField(
-      controller: _searchController,
-      decoration: InputDecoration(
-        hintText: l10n.searchHint,
-        prefixIcon: const Icon(Icons.search_rounded),
-        suffixIcon: _searchController.text.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.clear_rounded),
-                onPressed: _clearSearch,
-              )
-            : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+    return BlocBuilder<RecipeBloc, RecipeState>(
+      builder: (context, state) {
+        final isTelugu = context.read<LanguageBloc>().state.isTelugu;
+        final query = _searchController.text.trim();
+
+        // Build suggestion list from allRecipes when focused
+        List<Recipe> suggestions = [];
+        if (state is RecipeLoaded && _showSuggestions) {
+          if (query.isEmpty) {
+            // Show recent / popular — top 6 by rating
+            suggestions = [...state.allRecipes]
+              ..sort((a, b) => b.rating.compareTo(a.rating));
+            suggestions = suggestions.take(6).toList();
+          } else {
+            // Filter by title match
+            final q = query.toLowerCase();
+            suggestions = state.allRecipes
+                .where((r) =>
+                    r.title.toLowerCase().contains(q) ||
+                    r.titleTe.contains(q) ||
+                    r.category.toLowerCase().contains(q) ||
+                    r.region.toLowerCase().contains(q))
+                .take(8)
+                .toList();
+          }
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Search input row ───────────────────────────────────────────
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(16),
+                border: _showSuggestions
+                    ? Border.all(color: Colors.orange.shade300, width: 1.5)
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 14),
+                  Icon(Icons.search_rounded,
+                      color: _showSuggestions
+                          ? Colors.orange.shade700
+                          : Colors.grey.shade500,
+                      size: 22),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      decoration: InputDecoration(
+                        hintText: l10n.searchHint,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                        isDense: true,
+                      ),
+                      onChanged: _onSearchChanged,
+                      onTap: () => setState(() => _showSuggestions = true),
+                    ),
+                  ),
+                  // Clear button when typing
+                  if (query.isNotEmpty)
+                    IconButton(
+                      icon: Icon(Icons.clear_rounded,
+                          size: 18, color: Colors.grey.shade500),
+                      onPressed: _clearSearch,
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                    ),
+                  // Mic button — inline in search bar
+                  _InlineVoiceMic(
+                    onStartListening: () {
+                      _searchFocusNode.unfocus();
+                      setState(() => _showSuggestions = false);
+                      _startInlineVoiceSearch(context);
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                ],
+              ),
+            ),
+
+            // ── Suggestion dropdown ────────────────────────────────────────
+            if (_showSuggestions && suggestions.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Header row
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            query.isEmpty
+                                ? Icons.trending_up_rounded
+                                : Icons.search_rounded,
+                            size: 14,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            query.isEmpty
+                                ? (isTelugu
+                                    ? 'ప్రసిద్ధ వంటకాలు'
+                                    : 'Popular recipes')
+                                : (isTelugu ? 'ఫలితాలు' : 'Results'),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade400,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    // Suggestion rows
+                    ...suggestions.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final rec = entry.value;
+                      final isLast = i == suggestions.length - 1;
+                      return _SuggestionTile(
+                        recipe: rec,
+                        query: query,
+                        isTelugu: isTelugu,
+                        isLast: isLast,
+                        onTap: () {
+                          _searchFocusNode.unfocus();
+                          setState(() => _showSuggestions = false);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => RecipeDetailScreen(recipe: rec),
+                            ),
+                          );
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ),
+
+            // ── No results message ─────────────────────────────────────────
+            if (_showSuggestions &&
+                query.isNotEmpty &&
+                suggestions.isEmpty &&
+                state is RecipeLoaded)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Center(
+                  child: Text(
+                    isTelugu
+                        ? '"$query" కోసం వంటకాలు దొరకలేదు'
+                        : 'No recipes found for "$query"',
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _startInlineVoiceSearch(BuildContext context) {
+    final voiceBloc = context.read<VoiceBloc>();
+    final recipeBloc = context.read<RecipeBloc>();
+    final langBloc = context.read<LanguageBloc>();
+    final isTelugu = langBloc.state.isTelugu;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: voiceBloc),
+          BlocProvider.value(value: recipeBloc),
+          BlocProvider.value(value: langBloc),
+        ],
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
+          ),
+          child: const VoiceSearchSheet(),
         ),
-        filled: true,
-        fillColor: Colors.grey.shade100,
       ),
-      onChanged: _onSearchChanged,
     );
   }
 
@@ -970,31 +1341,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Voice Search ───────────────────────────────────────────────────────────
 
-  void _showVoiceSearch(BuildContext context) {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            context.read<LanguageBloc>().state.isTelugu
-                ? 'మొబైల్‌లో వాయిస్ సెర్చ్ పని చేస్తుంది'
-                : 'Voice search works best on mobile. Please type your search.',
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width - 32,
-      ),
-      builder: (_) => const VoiceSearchSheet(),
-    );
-  }
+  // _showVoiceSearch removed — use _startInlineVoiceSearch via mic in search bar
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -1313,125 +1660,468 @@ class VoiceSearchSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final isTelugu = context.watch<LanguageBloc>().state.isTelugu;
-    final size = MediaQuery.of(context).size;
-    final isSmall = size.width < 360;
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: size.height * 0.5,
-        minHeight: 300,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: isSmall ? 16 : 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Drag handle ─────────────────────────────────────────────────
+              Container(
+                margin: const EdgeInsets.only(top: 10),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            SizedBox(height: isSmall ? 16 : 24),
-            Text(
-              l10n.voiceCommands,
-              style: TextStyle(
-                  fontSize: isSmall ? 20 : 24, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.speakNow,
-              style: TextStyle(
-                  fontSize: isSmall ? 14 : 16, color: Colors.grey.shade600),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: isSmall ? 24 : 32),
-            BlocConsumer<VoiceBloc, VoiceState>(
-              listener: (context, state) {
-                if (state is VoiceSearchResult) {
-                  Navigator.pop(context);
-                  context.read<RecipeBloc>().add(SearchRecipes(state.text));
-                }
-                if (state is VoiceError) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.message)),
-                  );
-                }
-              },
-              builder: (context, state) {
-                final isListening = state is VoiceListening;
-                final micSize = isSmall ? 100.0 : 120.0;
 
-                return GestureDetector(
-                  onTap: () {
-                    if (isListening) {
-                      context.read<VoiceBloc>().add(const StopListening());
-                    } else {
-                      context.read<VoiceBloc>().add(
-                            StartListening(
-                                localeId: isTelugu ? 'te_IN' : 'en_US'),
-                          );
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: micSize,
-                    height: micSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isListening ? Colors.red : Colors.orange,
-                      boxShadow: [
-                        BoxShadow(
-                          color: (isListening ? Colors.red : Colors.orange)
-                              .withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          spreadRadius: 5,
+              // ── Gradient header ─────────────────────────────────────────────
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.orange.shade700,
+                      Colors.deepOrange.shade800
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.mic_rounded,
+                        color: Colors.white, size: 28),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isTelugu ? 'వాయిస్ సెర్చ్' : 'Voice Search',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          isTelugu
+                              ? 'తెలుగు లేదా ఇంగ్లీష్‌లో మాట్లాడండి'
+                              : 'Speak in Telugu or English',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
-                    child: Icon(
-                      isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                      size: isSmall ? 40.0 : 48.0,
-                      color: Colors.white,
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // ── Mic button with pulse ring ───────────────────────────────────
+              BlocConsumer<VoiceBloc, VoiceState>(
+                listener: (context, state) {
+                  if (state is VoiceSearchResult) {
+                    Navigator.pop(context);
+                    context.read<RecipeBloc>().add(SearchRecipes(state.text));
+                  }
+                  if (state is VoiceError) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(state.message)),
+                    );
+                  }
+                },
+                builder: (context, state) {
+                  final isListening = state is VoiceListening;
+                  return Column(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          if (isListening) {
+                            context
+                                .read<VoiceBloc>()
+                                .add(const StopListening());
+                          } else {
+                            context.read<VoiceBloc>().add(
+                                  StartListening(
+                                    localeId: isTelugu ? 'te_IN' : 'en_US',
+                                    isSearchMode:
+                                        true, // emit VoiceSearchResult, not command
+                                  ),
+                                );
+                          }
+                        },
+                        child: _MicButton(isListening: isListening),
+                      ),
+                      const SizedBox(height: 14),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: Text(
+                          key: ValueKey(isListening),
+                          isListening
+                              ? (isTelugu
+                                  ? '🎙 వింటున్నాను...'
+                                  : '🎙 Listening...')
+                              : (isTelugu
+                                  ? 'నొక్కి మాట్లాడండి'
+                                  : 'Tap to speak'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: isListening
+                                ? FontWeight.w700
+                                : FontWeight.normal,
+                            color: isListening
+                                ? Colors.deepOrange.shade700
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Example chips ────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    Text(
+                      isTelugu ? 'ఉదాహరణలు:' : 'Try saying:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade500,
+                        letterSpacing: 0.5,
+                      ),
                     ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: (isTelugu
+                              ? [
+                                  'బిర్యానీ',
+                                  'గోంగూర కూర',
+                                  'ఉదయం భోజనం',
+                                  'శాకాహారం'
+                                ]
+                              : [
+                                  'Biryani',
+                                  'Gongura',
+                                  'Breakfast',
+                                  'Vegetarian'
+                                ])
+                          .map((t) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border:
+                                      Border.all(color: Colors.orange.shade200),
+                                ),
+                                child: Text(
+                                  '"$t"',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.orange.shade800,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ))
+                          .toList(),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+            ],
+          ),
+        ), // SingleChildScrollView
+      ), // Container
+    ); // SafeArea
+  }
+}
+
+// ── Animated mic button ───────────────────────────────────────────────────────
+
+class _MicButton extends StatefulWidget {
+  final bool isListening;
+  const _MicButton({required this.isListening});
+
+  @override
+  State<_MicButton> createState() => _MicButtonState();
+}
+
+// ── Inline voice mic button (sits inside search bar) ────────────────────────
+
+class _InlineVoiceMic extends StatelessWidget {
+  final VoidCallback onStartListening;
+  const _InlineVoiceMic({required this.onStartListening});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<VoiceBloc, VoiceState>(
+      builder: (context, state) {
+        final isListening = state is VoiceListening;
+        return GestureDetector(
+          onTap: onStartListening,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            width: 36,
+            height: 36,
+            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isListening
+                  ? Colors.red.withValues(alpha: 0.1)
+                  : Colors.orange.withValues(alpha: 0.1),
+            ),
+            child: Icon(
+              isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+              size: 20,
+              color: isListening ? Colors.red.shade600 : Colors.orange.shade700,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Suggestion tile ───────────────────────────────────────────────────────────
+
+class _SuggestionTile extends StatelessWidget {
+  final Recipe recipe;
+  final String query;
+  final bool isTelugu;
+  final bool isLast;
+  final VoidCallback onTap;
+
+  const _SuggestionTile({
+    required this.recipe,
+    required this.query,
+    required this.isTelugu,
+    required this.isLast,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = isTelugu ? recipe.titleTe : recipe.title;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: isLast
+          ? const BorderRadius.vertical(bottom: Radius.circular(14))
+          : BorderRadius.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            // Category icon colored circle
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: recipe.categoryColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(recipe.categoryIcon,
+                  size: 18, color: recipe.categoryColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _HighlightedText(text: title, query: query),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        recipe.region,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: recipe.regionColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        '  •  ${recipe.cookTimeDisplay}',
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade400),
+                      ),
+                    ],
                   ),
-                );
-              },
+                ],
+              ),
             ),
-            SizedBox(height: isSmall ? 16 : 24),
-            Text(
-              isTelugu ? 'ఉదాహరణలు:' : 'Examples:',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: (isTelugu
-                      ? ['"బిర్యానీ"', '"గోంగూర"', '"ఉదయం భోజనం"']
-                      : ['"Biryani"', '"Gongura"', '"Breakfast"'])
-                  .map((t) => Chip(
-                        label: Text(t, style: const TextStyle(fontSize: 12)),
-                        backgroundColor: Colors.grey.shade100,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ))
-                  .toList(),
-            ),
-            SizedBox(height: isSmall ? 16 : 24),
+            Icon(Icons.arrow_forward_ios_rounded,
+                size: 12, color: Colors.grey.shade300),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Text with query highlighted in orange ─────────────────────────────────────
+
+class _HighlightedText extends StatelessWidget {
+  final String text;
+  final String query;
+  const _HighlightedText({required this.text, required this.query});
+
+  @override
+  Widget build(BuildContext context) {
+    if (query.isEmpty) {
+      return Text(text,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis);
+    }
+    final lower = text.toLowerCase();
+    final qLower = query.toLowerCase();
+    final idx = lower.indexOf(qLower);
+    if (idx < 0) {
+      return Text(text,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis);
+    }
+    return Text.rich(
+      TextSpan(children: [
+        if (idx > 0)
+          TextSpan(
+              text: text.substring(0, idx),
+              style:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        TextSpan(
+          text: text.substring(idx, idx + query.length),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: Colors.orange.shade700,
+            backgroundColor: Colors.orange.withValues(alpha: 0.1),
+          ),
+        ),
+        if (idx + query.length < text.length)
+          TextSpan(
+            text: text.substring(idx + query.length),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+      ]),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+class _MicButtonState extends State<_MicButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  late final Animation<double> _ring;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _ring = Tween(begin: 1.0, end: 1.35).animate(
+      CurvedAnimation(parent: _pulse, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_MicButton old) {
+    super.didUpdateWidget(old);
+    if (widget.isListening && !old.isListening) {
+      _pulse.repeat(reverse: true);
+    } else if (!widget.isListening && old.isListening) {
+      _pulse.stop();
+      _pulse.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ring,
+      builder: (_, __) => Stack(
+        alignment: Alignment.center,
+        children: [
+          // Outer pulse ring
+          if (widget.isListening)
+            Container(
+              width: 96 * _ring.value,
+              height: 96 * _ring.value,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.deepOrange
+                    .withValues(alpha: 0.15 * (1 - (_ring.value - 1) / 0.35)),
+              ),
+            ),
+          // Main button
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: widget.isListening
+                    ? [Colors.red.shade500, Colors.red.shade700]
+                    : [Colors.orange.shade600, Colors.deepOrange.shade700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (widget.isListening ? Colors.red : Colors.orange)
+                      .withValues(alpha: 0.4),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(
+              widget.isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+              color: Colors.white,
+              size: 36,
+            ),
+          ),
+        ],
       ),
     );
   }

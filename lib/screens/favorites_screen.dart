@@ -8,7 +8,10 @@ import '../models/recipe_model.dart';
 import 'recipe_detail_screen.dart';
 
 class FavoritesScreen extends StatelessWidget {
-  const FavoritesScreen({super.key});
+  /// Called when user taps "Browse Recipes" on the empty-state screen.
+  /// HomeScreen passes a callback that switches the bottom nav to tab 0.
+  final VoidCallback? onBrowse;
+  const FavoritesScreen({super.key, this.onBrowse});
 
   @override
   Widget build(BuildContext context) {
@@ -128,11 +131,7 @@ class FavoritesScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             FilledButton.icon(
-              onPressed: () {
-                // Pop back to home tab — handled by IndexedStack in HomeScreen
-                // This button intentionally does nothing if we're already in
-                // the bottom nav; the user just taps the Home tab.
-              },
+              onPressed: onBrowse,
               icon: const Icon(Icons.explore_rounded),
               label: Text(isTelugu ? 'వంటకాలను చూడండి' : 'Browse Recipes'),
               style: FilledButton.styleFrom(
