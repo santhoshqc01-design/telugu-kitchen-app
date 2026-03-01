@@ -38,6 +38,8 @@ dependencies:
   permission_handler: ^11.3.1 # was 10.4.5 — v1 embedding fix
   http: ^1.2.0
   path_provider: ^2.1.1  # temp directory for image export
+  flutter_staggered_animations: ^1.1.1
+  palette_generator: ^0.3.3+7
 
 
 dev_dependencies:

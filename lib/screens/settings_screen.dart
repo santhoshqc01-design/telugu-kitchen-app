@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../blocs/language/language_bloc.dart';
 import '../blocs/recipe/recipe_bloc.dart';
 import '../l10n/app_localizations.dart';
@@ -607,14 +608,27 @@ class SettingsScreen extends StatelessWidget {
                 size: 16, color: Colors.amber.shade400),
           ),
         ),
-        onTap: () {
-          // TODO: launch app store URL via url_launcher
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(isTelugu ? 'త్వరలో వస్తుంది!' : 'Coming soon!'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+        onTap: () async {
+          // Opens Play Store listing — replace with your actual package ID
+          const storeUrl =
+              'https://play.google.com/store/apps/details?id=com.ruchi.telugu_cooking_app';
+          final uri = Uri.parse(storeUrl);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    isTelugu
+                        ? 'Play స్టోర్ తెరవడం సాధ్యం కాలేదు'
+                        : 'Could not open Play Store',
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            }
+          }
         },
       ),
     );
@@ -630,7 +644,7 @@ class SettingsScreen extends StatelessWidget {
               size: 20, color: Colors.grey.shade300),
           const SizedBox(height: 8),
           Text(
-            '© 2024 Ruchi · రుచి',
+            '© 2026 Ruchi · రుచి',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
           ),
           const SizedBox(height: 4),

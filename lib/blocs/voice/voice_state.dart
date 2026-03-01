@@ -19,7 +19,11 @@ class VoiceReady extends VoiceState {
 
 /// Microphone open, awaiting speech.
 class VoiceListening extends VoiceState {
-  const VoiceListening();
+  final String? partialText;
+  const VoiceListening({this.partialText});
+
+  @override
+  List<Object?> get props => [partialText];
 }
 
 /// TTS is speaking.

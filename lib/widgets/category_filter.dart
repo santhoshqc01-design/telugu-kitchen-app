@@ -75,7 +75,7 @@ class CategoryFilter extends StatelessWidget {
               width: 70,
               height: 70,
               decoration: BoxDecoration(
-                color: isSelected ? color : color.withOpacity(0.1),
+                color: isSelected ? color : color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: isSelected ? Border.all(color: color, width: 3) : null,
               ),
@@ -111,7 +111,7 @@ class CategoryFilter extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? color : color.withOpacity(0.1),
+            color: isSelected ? color : color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(25),
             border: Border.all(
               color: color,

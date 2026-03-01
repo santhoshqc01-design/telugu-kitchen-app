@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../services/ingredient_image_service.dart';
 
 /// A single ingredient row with a photo thumbnail, name, and quantity.
@@ -181,17 +182,14 @@ class _NetworkImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: Image.network(
-          url,
+        child: CachedNetworkImage(
+          imageUrl: url,
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
+          errorWidget: (context, url, dynamic error) =>
               _AvatarFallback(name: name, size: size, svc: svc),
-          loadingBuilder: (_, child, progress) {
-            if (progress == null) return child;
-            return _Shimmer(size: size);
-          },
+          placeholder: (context, url) => _Shimmer(size: size),
         ),
       );
 }

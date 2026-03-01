@@ -54,7 +54,9 @@ class VoiceBloc extends Bloc<VoiceEvent, VoiceState> {
     emit(const VoiceListening());
     try {
       await _speechService.startListening(
-        onResult: (text) => add(SpeechResultReceived(text)),
+        onPartialResult: (text) =>
+            add(SpeechResultReceived(text, isFinal: false)),
+        onFinalResult: (text) => add(SpeechResultReceived(text, isFinal: true)),
         localeId: event.localeId,
       );
     } catch (e) {
@@ -77,10 +79,19 @@ class VoiceBloc extends Bloc<VoiceEvent, VoiceState> {
     Emitter<VoiceState> emit,
   ) {
     if (_isSearchMode) {
-      emit(VoiceSearchResult(event.text));
+      if (event.isFinal) {
+        emit(VoiceSearchResult(event.text));
+      } else {
+        // Emit recognized text so UI updates live
+        emit(VoiceListening(partialText: event.text));
+      }
     } else {
-      emit(VoiceTextRecognized(event.text));
-      add(ProcessVoiceCommand(event.text));
+      if (event.isFinal) {
+        emit(VoiceTextRecognized(event.text));
+        add(ProcessVoiceCommand(event.text));
+      } else {
+        emit(VoiceListening(partialText: event.text));
+      }
     }
   }
 

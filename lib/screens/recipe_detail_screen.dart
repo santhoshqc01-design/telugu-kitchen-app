@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:palette_generator/palette_generator.dart';
 import '../blocs/language/language_bloc.dart';
 import '../blocs/recipe/recipe_bloc.dart';
 import '../l10n/app_localizations.dart';
@@ -28,6 +31,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   // RepaintBoundary key — used for screenshot export of ingredients
   final GlobalKey _ingredientBoundaryKey = GlobalKey();
 
+  Color? _dominantColor;
+  Color? _mutedColor;
+
   static const int _maxServings = 20;
 
   @override
@@ -36,6 +42,26 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     _currentServings = widget.recipe.servings;
     _multiplier = 1.0;
     _tabController = TabController(length: 2, vsync: this);
+    _extractColors();
+  }
+
+  Future<void> _extractColors() async {
+    try {
+      final imageProvider = NetworkImage(widget.recipe.imageUrl);
+      final palette = await PaletteGenerator.fromImageProvider(
+        imageProvider,
+        maximumColorCount: 10,
+      );
+      if (mounted) {
+        setState(() {
+          _dominantColor = palette.dominantColor?.color;
+          _mutedColor =
+              palette.mutedColor?.color ?? palette.darkMutedColor?.color;
+        });
+      }
+    } catch (e) {
+      // Ignored if color extraction fails
+    }
   }
 
   @override
@@ -121,9 +147,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   // ── Sliver App Bar ─────────────────────────────────────────────────────────
 
   Widget _buildSliverAppBar(bool isTelugu, bool isTablet) {
+    final bgColor = _dominantColor ?? widget.recipe.regionColor;
     return SliverAppBar(
       expandedHeight: isTablet ? 350 : 280,
       pinned: true,
+      backgroundColor: bgColor,
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
           isTelugu ? widget.recipe.titleTe : widget.recipe.title,
@@ -140,23 +168,17 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.network(
-                widget.recipe.imageUrl,
+              CachedNetworkImage(
+                imageUrl: widget.recipe.imageUrl,
                 fit: BoxFit.cover,
-                frameBuilder: (_, child, frame, wasSynchronouslyLoaded) {
-                  if (wasSynchronouslyLoaded) return child;
-                  return AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 500),
-                    child: frame != null
-                        ? child
-                        : Shimmer.fromColors(
-                            baseColor: Colors.grey.shade300,
-                            highlightColor: Colors.grey.shade100,
-                            child: Container(color: Colors.white),
-                          ),
-                  );
-                },
-                errorBuilder: (_, __, ___) => Container(
+                width: double.infinity,
+                height: double.infinity,
+                placeholder: (context, url) => Shimmer.fromColors(
+                  baseColor: Colors.grey.shade300,
+                  highlightColor: Colors.grey.shade100,
+                  child: Container(color: Colors.white),
+                ),
+                errorWidget: (context, url, error) => Container(
                   color: widget.recipe.regionColor.withValues(alpha: 0.15),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -255,18 +277,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           color:
               widget.recipe.isVegetarian ? const Color(0xFF2E7D32) : Colors.red,
         ),
-        // Region — uses model's regionColor
+        // Region
         _tag(
           label: regionLabel,
-          color: widget.recipe.regionColor,
+          color: _dominantColor ?? widget.recipe.regionColor,
         ),
-        // Category — uses model's categoryColor
+        // Category
         _tag(
           icon: widget.recipe.categoryIcon,
           label: categoryLabel,
-          color: widget.recipe.categoryColor,
+          color: _mutedColor ?? widget.recipe.categoryColor,
         ),
-        // Difficulty — uses model's difficultyColor
+        // Difficulty
         _tag(
           icon: widget.recipe.difficultyIcon,
           label: isTelugu
@@ -485,9 +507,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   // ── Servings Adjuster ──────────────────────────────────────────────────────
 
   Widget _buildServingsAdjuster(bool isTelugu, bool isTablet) {
+    final themeColor = _dominantColor ?? Colors.orange.shade800;
+
     return Card(
       elevation: 3,
-      color: Colors.orange.shade50,
+      color: themeColor.withValues(alpha: 0.1),
       child: Padding(
         padding: EdgeInsets.all(isTablet ? 20 : 16),
         child: Column(
@@ -497,7 +521,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
               style: TextStyle(
                 fontSize: isTablet ? 18 : 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.orange.shade800,
+                color: themeColor,
               ),
             ),
             const SizedBox(height: 16),
@@ -522,10 +546,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.orange.shade300),
+                      border:
+                          Border.all(color: themeColor.withValues(alpha: 0.5)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.orange.withValues(alpha: 0.1),
+                          color: themeColor.withValues(alpha: 0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -538,7 +563,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                           style: TextStyle(
                             fontSize: isTablet ? 32 : 28,
                             fontWeight: FontWeight.bold,
-                            color: Colors.orange.shade800,
+                            color: themeColor,
                           ),
                         ),
                         Text(
@@ -569,7 +594,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
+                  color: themeColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -578,7 +603,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       : 'Quantities adjusted ${_multiplier.toStringAsFixed(1)}×',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.orange.shade800,
+                    color: themeColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -596,8 +621,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
       style: ElevatedButton.styleFrom(
         shape: const CircleBorder(),
         padding: const EdgeInsets.all(12),
-        backgroundColor:
-            onPressed != null ? Colors.orange.shade800 : Colors.grey.shade300,
+        backgroundColor: onPressed != null
+            ? (_dominantColor ?? Colors.orange.shade800)
+            : Colors.grey.shade300,
         foregroundColor: Colors.white,
         elevation: onPressed != null ? 2 : 0,
       ),
@@ -645,6 +671,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
 
   Widget _tabToggle(int index, String label) {
     final isSelected = _tabController.index == index;
+    final themeColor = _dominantColor ?? Colors.orange.shade800;
+
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _tabController.index = index),
@@ -652,7 +680,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.orange.shade800 : Colors.transparent,
+            color: isSelected ? themeColor : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -689,21 +717,32 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           child: Card(
             elevation: 2,
             color: Colors.white,
-            child: ListView.separated(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(12),
-              itemCount: ingredients.length,
-              separatorBuilder: (_, __) =>
-                  Divider(height: 1, color: Colors.grey.shade100),
-              itemBuilder: (_, i) => IngredientTile(
-                rawIngredient: ingredients[i],
-                englishRaw: i < englishIngredients.length
-                    ? englishIngredients[i]
-                    : null,
-                isAdjusted: isAdjusted,
-                isTablet: isTablet,
-                imageSize: isTablet ? 56 : 48,
+            child: AnimationLimiter(
+              child: ListView.separated(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                padding: const EdgeInsets.all(12),
+                itemCount: ingredients.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, color: Colors.grey.shade100),
+                itemBuilder: (_, i) => AnimationConfiguration.staggeredList(
+                  position: i,
+                  duration: const Duration(milliseconds: 375),
+                  child: SlideAnimation(
+                    verticalOffset: 50.0,
+                    child: FadeInAnimation(
+                      child: IngredientTile(
+                        rawIngredient: ingredients[i],
+                        englishRaw: i < englishIngredients.length
+                            ? englishIngredients[i]
+                            : null,
+                        isAdjusted: isAdjusted,
+                        isTablet: isTablet,
+                        imageSize: isTablet ? 56 : 48,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -773,68 +812,81 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
 
     return Card(
       elevation: 2,
-      child: ListView.separated(
-        physics: const NeverScrollableScrollPhysics(),
-        shrinkWrap: true,
-        padding: const EdgeInsets.all(12),
-        itemCount: instructions.length,
-        separatorBuilder: (_, __) =>
-            Divider(height: 1, color: Colors.grey.shade100),
-        itemBuilder: (context, i) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Step circle
-                Container(
-                  width: isTablet ? 32 : 28,
-                  height: isTablet ? 32 : 28,
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade800,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${i + 1}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
+      child: AnimationLimiter(
+        child: ListView.separated(
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          padding: const EdgeInsets.all(12),
+          itemCount: instructions.length,
+          separatorBuilder: (_, __) =>
+              Divider(height: 1, color: Colors.grey.shade100),
+          itemBuilder: (context, i) {
+            return AnimationConfiguration.staggeredList(
+              position: i,
+              duration: const Duration(milliseconds: 375),
+              child: SlideAnimation(
+                verticalOffset: 50.0,
+                child: FadeInAnimation(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Step circle
+                        Container(
+                          width: isTablet ? 32 : 28,
+                          height: isTablet ? 32 : 28,
+                          decoration: BoxDecoration(
+                            color: _dominantColor ?? Colors.orange.shade800,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${i + 1}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Connector line (except last item)
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isTelugu ? 'దశ ${i + 1}' : 'Step ${i + 1}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color:
+                                      _dominantColor ?? Colors.orange.shade700,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                instructions[i],
+                                style: TextStyle(
+                                  fontSize: isTablet ? 17 : 15,
+                                  height: 1.5,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                // Connector line (except last item)
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isTelugu ? 'దశ ${i + 1}' : 'Step ${i + 1}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.orange.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        instructions[i],
-                        style: TextStyle(
-                          fontSize: isTablet ? 17 : 15,
-                          height: 1.5,
-                          color: Colors.grey.shade800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -842,6 +894,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   // ── Start Cooking Button ───────────────────────────────────────────────────
 
   Widget _buildStartCookingButton(AppLocalizations l10n, bool isTablet) {
+    final accentColor = _dominantColor ?? Colors.orange.shade800;
     return SizedBox(
       width: double.infinity,
       child: FilledButton.icon(
@@ -863,11 +916,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           ),
         ),
         style: FilledButton.styleFrom(
-          backgroundColor: Colors.orange.shade800,
+          backgroundColor: accentColor,
+          foregroundColor: Colors.white,
           padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
+          shadowColor: accentColor.withValues(alpha: 0.5),
+          elevation: 4,
         ),
       ),
     );

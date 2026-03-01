@@ -32,10 +32,11 @@ class StopListening extends VoiceEvent {
 
 class SpeechResultReceived extends VoiceEvent {
   final String text;
-  const SpeechResultReceived(this.text);
+  final bool isFinal;
+  const SpeechResultReceived(this.text, {this.isFinal = true});
 
   @override
-  List<Object?> get props => [text];
+  List<Object?> get props => [text, isFinal];
 }
 
 class SpeakText extends VoiceEvent {

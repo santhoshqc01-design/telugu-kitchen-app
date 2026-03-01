@@ -466,7 +466,6 @@ class _ConnectivityBannerState extends State<_ConnectivityBanner>
 
   void _onConnectivityChanged(bool isOnline) {
     if (!mounted) return;
-    final wasOnline = _isOnline;
     setState(() {
       _isOnline = isOnline;
       _showBanner = true;

@@ -20,11 +20,6 @@ import 'home_screen.dart';
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
-  // ── Lottie Sources ─────────────────────────────────────────────────────────
-  // Network: cooking pot with steam (LottieFiles free CDN)
-  static const String _lottieNetworkUrl =
-      'https://assets9.lottiefiles.com/packages/lf20_msbottom.json';
-
   // Asset: local file path (used after you download the file)
   static const String _lottiePath = 'assets/lottie/food_animation.json';
 

@@ -54,6 +54,9 @@ class Recipe extends Equatable {
 
   // ── Computed Properties ────────────────────────────────────────────────────
 
+  /// Sanitized image URL with whitespace trimmed (fixes mobile loading issues)
+  String get sanitizedImageUrl => imageUrl.trim();
+
   /// Display-ready cook time e.g. "45 min" or "1 hr 30 min"
   String get cookTimeDisplay {
     if (cookTimeMinutes < 60) return '$cookTimeMinutes min';
@@ -169,7 +172,8 @@ class Recipe extends Equatable {
       titleTe: json['titleTe'] as String,
       description: json['description'] as String,
       descriptionTe: json['descriptionTe'] as String,
-      imageUrl: json['imageUrl'] as String,
+      // Trim imageUrl to fix mobile loading issues with trailing spaces
+      imageUrl: (json['imageUrl'] as String).trim(),
       ingredients: List<String>.from(json['ingredients'] as List),
       ingredientsTe: List<String>.from(json['ingredientsTe'] as List),
       instructions: List<String>.from(json['instructions'] as List),
@@ -423,7 +427,7 @@ final List<Recipe> sampleRecipes = [
         'Spicy and flavorful chicken curry from Andhra region with rich masala',
     descriptionTe: 'గొడవల మసాలాతో రుచికరమైన ఆంధ్ర చికెన్ కూర',
     imageUrl:
-        'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800',
+        'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800 ',
     ingredients: [
       '500g chicken',
       '2 onions, finely chopped',
@@ -491,7 +495,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Tangy sorrel leaves chutney, a signature Andhra dish',
     descriptionTe: 'ఆంధ్రకు ప్రత్యేకమైన పుల్లటి గోంగూర ఆకుల పచ్చడి',
     imageUrl:
-        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800',
+        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800 ',
     ingredients: [
       '2 cups gongura (sorrel) leaves',
       '4 dry red chilies',
@@ -549,7 +553,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Green gram dosa, a healthy breakfast from Andhra',
     descriptionTe: 'ఆరోగ్యకరమైన ఆంధ్ర ప్రాతః భోజనం పెసరట్టు',
     imageUrl:
-        'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800',
+        'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800 ',
     ingredients: [
       '1 cup green gram (moong dal)',
       '1/4 cup rice',
@@ -607,7 +611,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Prawn fry with rich spice coating, coastal Andhra specialty',
     descriptionTe: 'మసాలాలతో కోస్టల్ ఆంధ్ర ప్రత్యేక రొయ్యల ఇగురు',
     imageUrl:
-        'https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=800',
+        'https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=800 ',
     ingredients: [
       '500g prawns, cleaned',
       '1 onion, finely chopped',
@@ -673,7 +677,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Stuffed baby eggplants in rich peanut sesame gravy',
     descriptionTe: 'వేరుశనగ, నువ్వులతో గుత్తి వంకాయల కూర',
     imageUrl:
-        'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=800',
+        'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=800 ',
     ingredients: [
       '8-10 baby eggplants',
       '1/4 cup peanuts',
@@ -744,7 +748,7 @@ final List<Recipe> sampleRecipes = [
         'World-famous aromatic rice dish with layered chicken and spices',
     descriptionTe: 'ప్రపంచ ప్రసిద్ధ సువాసన బిర్యానీ',
     imageUrl:
-        'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800',
+        'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800 ',
     ingredients: [
       '500g basmati rice',
       '500g chicken',
@@ -816,7 +820,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Slow-cooked wheat and meat porridge, Ramadan specialty',
     descriptionTe: 'గోధుమ, మాంసంతో నెమ్మదిగా ఉడికించిన హలీం',
     imageUrl:
-        'https://images.unsplash.com/photo-1631292784640-2b24a095d7f5?w=800',
+        'https://images.unsplash.com/photo-1631292784640-2b24a095d7f5?w=800 ',
     ingredients: [
       '500g mutton with bones',
       '1 cup broken wheat (dalia)',
@@ -882,7 +886,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Hyderabadi bread pudding with rich nuts and saffron',
     descriptionTe: 'జీడిపప్పు, కుంకుమపువ్వుతో హైదరాబాదీ బ్రెడ్ పుడ్డింగ్',
     imageUrl:
-        'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800',
+        'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800 ',
     ingredients: [
       '6 bread slices',
       '1 liter full cream milk',
@@ -945,7 +949,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Telangana rice flour pancake with peanuts and spices',
     descriptionTe: 'వేరుశనగ, మసాలాలతో తెలంగాణ రైస్ ఫ్లోర్ పాన్‌కేక్',
     imageUrl:
-        'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800',
+        'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800 ',
     ingredients: [
       '2 cups rice flour',
       '1/4 cup peanuts',
@@ -1011,7 +1015,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Country chicken curry with traditional Telangana spices',
     descriptionTe: 'సాంప్రదాయ తెలంగాణ మసాలాలతో నాటు కోడి కూర',
     imageUrl:
-        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800',
+        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800 ',
     ingredients: [
       '1 kg country chicken',
       '3 onions, finely chopped',
@@ -1083,7 +1087,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Extra spicy dry chicken fry with special Rayalaseema masala',
     descriptionTe: 'ప్రత్యేక రాయలసీమ మసాలాతో ఎక్స్ట్రా స్పైసీ డ్రై చికెన్',
     imageUrl:
-        'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=800',
+        'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=800 ',
     ingredients: [
       '500g chicken',
       '3 tbsp Rayalaseema chili powder',
@@ -1152,7 +1156,7 @@ final List<Recipe> sampleRecipes = [
         'Finger millet balls, staple food of Rayalaseema with spicy curry',
     descriptionTe: 'రాయలసీమ ప్రధాన ఆహారం రాగి సంగటి',
     imageUrl:
-        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800',
+        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800 ',
     ingredients: [
       '2 cups ragi flour',
       '1 cup rice',
@@ -1206,7 +1210,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Tangy country chicken curry with tamarind, Rayalaseema style',
     descriptionTe: 'చింతపండుతో పుల్లటి నాటు కోడి పులుసు',
     imageUrl:
-        'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800',
+        'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800 ',
     ingredients: [
       '1 kg country chicken',
       '3 onions, sliced',
@@ -1278,7 +1282,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Steamed rice cakes, South Indian breakfast staple',
     descriptionTe: 'ఆవిరి మీద ఉడికించిన ఇడ్లీలు',
     imageUrl:
-        'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800',
+        'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800 ',
     ingredients: [
       '2 cups idli rice',
       '1 cup urad dal',
@@ -1332,7 +1336,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Thin crispy rice crepes, perfect breakfast item',
     descriptionTe: 'పల్చటి కరకరలాడే దోశలు',
     imageUrl:
-        'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800',
+        'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800 ',
     ingredients: [
       '2 cups dosa rice',
       '1/2 cup urad dal',
@@ -1388,7 +1392,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Savory semolina porridge with vegetables',
     descriptionTe: 'కూరగాయలతో రుచికరమైన రవ్వ ఉప్మా',
     imageUrl:
-        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800',
+        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800 ',
     ingredients: [
       '1 cup semolina (rava)',
       '2 cups water',
@@ -1460,7 +1464,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Stuffed green chili fritters, famous Andhra snack',
     descriptionTe: 'ప్రసిద్ధ ఆంధ్ర స్నాక్ మిర్చి బజ్జీ',
     imageUrl:
-        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800',
+        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800 ',
     ingredients: [
       '10-12 thick green chilies (bajji mirchi)',
       '1 cup gram flour (besan)',
@@ -1526,7 +1530,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Crispy rice and urad dal fritters, popular evening snack',
     descriptionTe: 'బియ్యం, మినపప్పతో కరకరలాడే పునుగులు',
     imageUrl:
-        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800',
+        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800 ',
     ingredients: [
       '2 cups idli batter (slightly sour)',
       '1 onion, finely chopped',
@@ -1587,7 +1591,7 @@ final List<Recipe> sampleRecipes = [
         'Traditional sweet made with rice flour and jaggery for festivals',
     descriptionTe: 'పండుగలకు ప్రత్యేకమైన బియ్యం పిండి, బెల్లంతో చేసిన మిఠాయి',
     imageUrl:
-        'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800',
+        'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800 ',
     ingredients: [
       '2 cups rice flour',
       '1 cup jaggery',
@@ -1648,7 +1652,7 @@ final List<Recipe> sampleRecipes = [
         'Paper-thin sweet rolls with sugar and dry fruits from Atreyapuram',
     descriptionTe: 'అత్రేయపురం ప్రత్యేక పూతరేకులు',
     imageUrl:
-        'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800',
+        'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800 ',
     ingredients: [
       'Rice batter (for thin sheets)',
       '1 cup powdered sugar',
@@ -1707,7 +1711,8 @@ final List<Recipe> sampleRecipes = [
     titleTe: 'మసాలా చాస్',
     description: 'Spiced buttermilk, perfect summer cooler',
     descriptionTe: 'వేసవికాలానికి బాగా సరిపోయే మసాలా మజ్జిగ',
-    imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800',
+    imageUrl:
+        'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800 ',
     ingredients: [
       '2 cups yogurt (slightly sour)',
       '3 cups cold water',
@@ -1769,7 +1774,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Strong aromatic coffee with frothy milk',
     descriptionTe: 'పొంగే పాలతో గట్టి సువాసన కాఫీ',
     imageUrl:
-        'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=800',
+        'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=800 ',
     ingredients: [
       '3 tbsp coffee powder (filter coffee grind)',
       '1 cup water',
@@ -1823,7 +1828,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Tangy fish curry with tamarind, Andhra coastal specialty',
     descriptionTe: 'చింతపండుతో పుల్లటి చేపల పులుసు',
     imageUrl:
-        'https://images.unsplash.com/photo-1626202158822-1c83f5f76417?w=800',
+        'https://images.unsplash.com/photo-1626202158822-1c83f5f76417?w=800 ',
     ingredients: [
       '500g fish (carp or catfish)',
       'Lemon sized tamarind',
@@ -1893,7 +1898,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Nutritious spinach and lentil curry, comfort food',
     descriptionTe: 'పోషకాలతో కూడిన పాలకూర పప్పు',
     imageUrl:
-        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800',
+        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800 ',
     ingredients: [
       '1 cup toor dal',
       '2 cups spinach, chopped',
@@ -1965,7 +1970,7 @@ final List<Recipe> sampleRecipes = [
     description: 'Minced mutton curry with peas, perfect with roti or rice',
     descriptionTe: 'బటానీలతో మటన్ కీమా కూర',
     imageUrl:
-        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800',
+        'https://images.unsplash.com/photo-1606491956689-05f4575a45d8?w=800 ',
     ingredients: [
       '500g minced mutton',
       '1 cup green peas',

@@ -10,18 +10,24 @@ class SpeechService {
   Future<void> initialize() async {
     _speechToText = SpeechToText();
     _isInitialized = await _speechToText.initialize(
-      onError: (error) => print('Speech error: $error'),
-      onStatus: (status) => print('Speech status: $status'),
+      onError: (error) => print('Speech error: ${error.errorMsg}'),
+      onStatus: (status) {
+        print('Speech status: $status');
+        if (status == 'done' || status == 'notListening') {
+          _isListening = false;
+        }
+      },
       debugLogging: kIsWeb,
     );
   }
 
   Future<bool> startListening({
-    required Function(String) onResult,
+    required Function(String) onPartialResult,
+    required Function(String) onFinalResult,
     String localeId = 'te_IN',
   }) async {
     if (!_isInitialized) await initialize();
-    if (_isListening) return false;
+    if (!_isInitialized) return false;
 
     _isListening = true;
     final effectiveLocale = kIsWeb && localeId == 'te_IN' ? 'en_US' : localeId;
@@ -29,11 +35,18 @@ class SpeechService {
     await _speechToText.listen(
       onResult: (SpeechRecognitionResult result) {
         if (result.finalResult) {
-          onResult(result.recognizedWords);
           _isListening = false;
+          onFinalResult(result.recognizedWords);
+        } else {
+          onPartialResult(result.recognizedWords);
         }
       },
       localeId: effectiveLocale,
+      listenOptions: SpeechListenOptions(
+        cancelOnError: true,
+        partialResults: true,
+        listenMode: ListenMode.search,
+      ),
     );
 
     return true;

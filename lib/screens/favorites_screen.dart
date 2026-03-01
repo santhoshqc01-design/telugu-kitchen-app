@@ -1,17 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../blocs/recipe/recipe_bloc.dart';
 import '../blocs/language/language_bloc.dart';
 import '../l10n/app_localizations.dart';
 import '../models/recipe_model.dart';
 import 'recipe_detail_screen.dart';
 
-class FavoritesScreen extends StatelessWidget {
+class FavoritesScreen extends StatefulWidget {
   /// Called when user taps "Browse Recipes" on the empty-state screen.
   /// HomeScreen passes a callback that switches the bottom nav to tab 0.
   final VoidCallback? onBrowse;
   const FavoritesScreen({super.key, this.onBrowse});
+
+  @override
+  State<FavoritesScreen> createState() => _FavoritesScreenState();
+}
+
+class _FavoritesScreenState extends State<FavoritesScreen> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +39,44 @@ class FavoritesScreen extends StatelessWidget {
         backgroundColor: Colors.orange.shade800,
         foregroundColor: Colors.white,
         elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _query = v.trim()),
+              style: const TextStyle(color: Colors.white),
+              cursorColor: Colors.white,
+              decoration: InputDecoration(
+                hintText: isTelugu
+                    ? 'ఇష్టమైనవాటిోల్ వెతకండి...'
+                    : 'Search favorites...',
+                hintStyle:
+                    TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                prefixIcon: Icon(Icons.search_rounded,
+                    color: Colors.white.withValues(alpha: 0.8)),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded,
+                            color: Colors.white70),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _query = '');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.15),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+        ),
         actions: [
           // Sort favorites
           BlocBuilder<RecipeBloc, RecipeState>(
@@ -48,17 +101,46 @@ class FavoritesScreen extends StatelessWidget {
           }
 
           if (state is RecipeLoaded) {
-            final favorites = state.favoriteRecipes;
+            final allFavorites = state.favoriteRecipes;
 
-            if (favorites.isEmpty) {
+            // Apply search filter
+            final favorites = _query.isEmpty
+                ? allFavorites
+                : allFavorites.where((r) {
+                    final q = _query.toLowerCase();
+                    return r.title.toLowerCase().contains(q) ||
+                        r.titleTe.contains(q) ||
+                        r.category.toLowerCase().contains(q) ||
+                        r.region.toLowerCase().contains(q);
+                  }).toList();
+
+            if (allFavorites.isEmpty) {
               return _buildEmptyState(context, isTelugu);
             }
 
+            if (favorites.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.search_off_rounded,
+                        size: 64, color: Colors.grey.shade300),
+                    const SizedBox(height: 16),
+                    Text(
+                      isTelugu
+                          ? '"$_query" కు పోలికలు లేవు'
+                          : 'No favorites match "$_query"',
+                      style:
+                          TextStyle(fontSize: 16, color: Colors.grey.shade500),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            }
+
             return RefreshIndicator(
-              onRefresh: () async {
-                // Favorites live in RecipeBloc state — nothing to reload
-                // but pull-to-refresh is a nice UX affordance
-              },
+              onRefresh: () async {},
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                 itemCount: favorites.length,
@@ -131,7 +213,7 @@ class FavoritesScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             FilledButton.icon(
-              onPressed: onBrowse,
+              onPressed: widget.onBrowse,
               icon: const Icon(Icons.explore_rounded),
               label: Text(isTelugu ? 'వంటకాలను చూడండి' : 'Browse Recipes'),
               style: FilledButton.styleFrom(
@@ -329,30 +411,29 @@ class _FavoriteCard extends StatelessWidget {
   Widget _buildThumbnail() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
-      child: SizedBox(
+      child: CachedNetworkImage(
+        imageUrl: recipe.imageUrl,
         width: 80,
         height: 80,
-        child: Image.network(
-          recipe.imageUrl,
-          fit: BoxFit.cover,
-          frameBuilder: (_, child, frame, sync) {
-            if (sync) return child;
-            return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: frame != null
-                  ? child
-                  : Shimmer.fromColors(
-                      baseColor: Colors.grey.shade300,
-                      highlightColor: Colors.grey.shade100,
-                      child: Container(color: Colors.white),
-                    ),
-            );
-          },
-          errorBuilder: (_, __, ___) => Container(
-            color: recipe.regionColor.withValues(alpha: 0.15),
-            child: Center(
-              child: Icon(Icons.restaurant_rounded,
-                  color: recipe.regionColor.withValues(alpha: 0.5), size: 32),
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            width: 80,
+            height: 80,
+            color: Colors.white,
+          ),
+        ),
+        errorWidget: (context, url, error) => Container(
+          width: 80,
+          height: 80,
+          color: recipe.regionColor.withValues(alpha: 0.15),
+          child: Center(
+            child: Icon(
+              Icons.restaurant_rounded,
+              color: recipe.regionColor.withValues(alpha: 0.5),
+              size: 32,
             ),
           ),
         ),
